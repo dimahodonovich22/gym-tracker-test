@@ -249,6 +249,23 @@ function vatLetter(r) { return VAT_LETTER[r] || "C"; }
 function nextBillNo() { state.billCounter = (Number(state.billCounter) || 1000) + 1; return state.billCounter; }
 // Имя для чека — без номера позиции из меню ("12 · Борщ" -> "Борщ").
 function dishName(name) { return String(name ?? "").replace(/^\d+\s*·\s*/, ""); }
+// Короткое имя для чека: основное название (первые 2-3 слова), без скобок,
+// без хвостовых служебных слов и без многоточия — как в образце чека.
+const NAME_STOP = new Set(["with", "and", "of", "the", "in", "on", "met", "en", "de", "het", "a", "an", "la", "le", "&", "-", "/"]);
+function receiptName(name) {
+  const s = dishName(name).replace(/\s*\([^)]*\)/g, " ").replace(/\s+/g, " ").trim();
+  const words = s.split(" ");
+  const out = [];
+  let len = 0;
+  for (const w of words) {
+    if (out.length >= 3) break;
+    const add = (out.length ? 1 : 0) + w.length;
+    if (out.length && len + add > 22) break;
+    out.push(w); len += add;
+  }
+  while (out.length > 1 && NAME_STOP.has(out[out.length - 1].toLowerCase())) out.pop();
+  return out.join(" ") || s;
+}
 
 function toast(msg) {
   const el = $("#toast");
@@ -597,7 +614,7 @@ function receiptHtml(rc, pay) {
   const itemRows = rc.items.map(i => `
     <div class="r-line">
       <span class="r-q">${i.qty}</span>
-      <span class="r-d">${esc(dishName(i.name))}</span>
+      <span class="r-d">${esc(receiptName(i.name))}</span>
       <span class="r-ep">${euro(i.price)}</span>
       <span class="r-tot">${euro(i.price * i.qty)}</span>
       <span class="r-vl">${vatLetter(i.vat ?? 6)}</span>

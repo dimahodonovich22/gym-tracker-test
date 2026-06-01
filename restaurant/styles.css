@@ -252,11 +252,11 @@ nav.bottom a.ext-link { color: var(--muted); opacity: 0.8; }
 .r-meta { font-size: 11px; }
 .r-mrow { display: flex; justify-content: space-between; gap: 8px; }
 .r-line {
-  display: grid; grid-template-columns: 2.2em 1fr 3.4em 3.9em 1em; gap: 4px;
+  display: grid; grid-template-columns: 2em 1fr 3.2em 3.6em 0.9em; gap: 4px;
   font-size: 11px; align-items: baseline;
 }
 .r-line .r-q, .r-line .r-ep, .r-line .r-tot, .r-line .r-vl { text-align: right; }
-.r-line .r-d { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.r-line .r-d { overflow: hidden; white-space: nowrap; }
 .r-lhead { font-weight: 700; }
 .r-grandrow { display: flex; justify-content: space-between; gap: 8px; font-weight: 700; margin-top: 2px; }
 .r-payrow { display: flex; justify-content: space-between; gap: 8px; font-size: 16px; font-weight: 800; margin-top: 2px; }

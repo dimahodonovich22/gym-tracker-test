@@ -1,4 +1,4 @@
-const CACHE = "restpos-test-v8";
+const CACHE = "restpos-test-v9";
 const ASSETS = [
   "./",
   "./index.html",
