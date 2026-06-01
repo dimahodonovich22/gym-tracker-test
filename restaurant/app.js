@@ -247,6 +247,8 @@ function fmtReceiptDateTime(iso) {
 const VAT_LETTER = { 21: "A", 12: "B", 6: "C" };
 function vatLetter(r) { return VAT_LETTER[r] || "C"; }
 function nextBillNo() { state.billCounter = (Number(state.billCounter) || 1000) + 1; return state.billCounter; }
+// Имя для чека — без номера позиции из меню ("12 · Борщ" -> "Борщ").
+function dishName(name) { return String(name ?? "").replace(/^\d+\s*·\s*/, ""); }
 
 function toast(msg) {
   const el = $("#toast");
@@ -595,7 +597,7 @@ function receiptHtml(rc, pay) {
   const itemRows = rc.items.map(i => `
     <div class="r-line">
       <span class="r-q">${i.qty}</span>
-      <span class="r-d">${esc(i.name)}</span>
+      <span class="r-d">${esc(dishName(i.name))}</span>
       <span class="r-ep">${euro(i.price)}</span>
       <span class="r-tot">${euro(i.price * i.qty)}</span>
       <span class="r-vl">${vatLetter(i.vat ?? 6)}</span>
