@@ -223,8 +223,8 @@ function money(n) {
 }
 function fmtDateTime(iso) {
   const d = new Date(iso);
-  return d.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" }) +
-    " " + d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleDateString("uk-UA", { day: "2-digit", month: "2-digit", year: "numeric" }) +
+    " " + d.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
 }
 
 function toast(msg) {
@@ -306,10 +306,10 @@ function viewTables() {
       <button class="card table-card ${qty ? "busy" : "free"}" onclick="go('table/${t.id}')">
         <div class="table-card-top">
           <span class="table-name">${icon("table", 18)} ${esc(t.name)}</span>
-          <span class="badge ${qty ? "badge-busy" : "badge-free"}">${qty ? "Занят" : "Свободен"}</span>
+          <span class="badge ${qty ? "badge-busy" : "badge-free"}">${qty ? "Зайнятий" : "Вільний"}</span>
         </div>
         <div class="table-card-bottom">
-          <span class="muted">${qty ? `${qty} ${plural(qty, "позиция", "позиции", "позиций")}` : "Нет заказа"}</span>
+          <span class="muted">${qty ? `${qty} ${plural(qty, "позиція", "позиції", "позицій")}` : "Немає замовлення"}</span>
           <span class="table-sum">${subtotal ? money(subtotal) : ""}</span>
         </div>
       </button>`;
@@ -318,10 +318,10 @@ function viewTables() {
   return `
     <header class="topbar">
       <div class="topbar-title">${icon("store", 22)} ${esc(state.settings.restaurant)}</div>
-      <button class="icon-btn" onclick="addTable()" aria-label="Добавить столик">${icon("plus", 22)}</button>
+      <button class="icon-btn" onclick="addTable()" aria-label="Додати столик">${icon("plus", 22)}</button>
     </header>
     <div class="page">
-      ${tables.length ? `<div class="grid">${cards}</div>` : emptyState("table", "Пока нет столиков", "Добавьте первый столик, чтобы начать принимать заказы.", "Добавить столик", "addTable()")}
+      ${tables.length ? `<div class="grid">${cards}</div>` : emptyState("table", "Поки немає столиків", "Додайте перший столик, щоб почати приймати замовлення.", "Додати столик", "addTable()")}
     </div>`;
 }
 
@@ -338,14 +338,14 @@ function emptyState(ico, title, text, btnLabel, btnAction) {
 function addTable() {
   const n = state.tables.length + 1;
   openModal(`
-    <div class="modal-head"><h2>Новый столик</h2><button class="icon-btn" onclick="closeModal()">${icon("x", 20)}</button></div>
+    <div class="modal-head"><h2>Новий столик</h2><button class="icon-btn" onclick="closeModal()">${icon("x", 20)}</button></div>
     <label class="field">
-      <span>Название</span>
+      <span>Назва</span>
       <input id="tblName" type="text" value="Столик ${n}" autocomplete="off">
     </label>
     <div class="modal-actions">
-      <button class="btn" onclick="closeModal()">Отмена</button>
-      <button class="btn btn-primary" onclick="saveNewTable()">Создать</button>
+      <button class="btn" onclick="closeModal()">Скасувати</button>
+      <button class="btn btn-primary" onclick="saveNewTable()">Створити</button>
     </div>`);
   setTimeout(() => { const i = $("#tblName"); i.focus(); i.select(); }, 50);
 }
@@ -373,9 +373,9 @@ function viewTable(id) {
         <div class="order-price muted">${money(i.price)} × ${i.qty} = ${money(i.price * i.qty)}</div>
       </div>
       <div class="stepper">
-        <button class="step-btn" onclick="changeQty('${t.id}','${i.id}',-1)" aria-label="Меньше">${icon("minus", 18)}</button>
+        <button class="step-btn" onclick="changeQty('${t.id}','${i.id}',-1)" aria-label="Менше">${icon("minus", 18)}</button>
         <span class="step-val">${i.qty}</span>
-        <button class="step-btn" onclick="changeQty('${t.id}','${i.id}',1)" aria-label="Больше">${icon("plus", 18)}</button>
+        <button class="step-btn" onclick="changeQty('${t.id}','${i.id}',1)" aria-label="Більше">${icon("plus", 18)}</button>
       </div>
     </div>`).join("");
 
@@ -383,17 +383,17 @@ function viewTable(id) {
     <header class="topbar">
       <button class="icon-btn" onclick="go('tables')" aria-label="Назад">${icon("arrowLeft", 22)}</button>
       <div class="topbar-title editable" onclick="renameTable('${t.id}')">${esc(t.name)} ${icon("edit", 15, "dim")}</div>
-      <button class="icon-btn danger" onclick="confirmCloseTable('${t.id}')" aria-label="Закрыть столик">${icon("trash", 20)}</button>
+      <button class="icon-btn danger" onclick="confirmCloseTable('${t.id}')" aria-label="Закрити столик">${icon("trash", 20)}</button>
     </header>
     <div class="page page-order">
-      ${t.items.length ? `<div class="list">${items}</div>` : `<div class="empty small"><div class="empty-ico">${icon("utensils", 36)}</div><div class="empty-title">Заказ пуст</div><div class="empty-text">Добавьте блюда из меню.</div></div>`}
-      <button class="btn btn-add-dish" onclick="openDishPicker('${t.id}')">${icon("plus", 18)} Добавить блюдо</button>
+      ${t.items.length ? `<div class="list">${items}</div>` : `<div class="empty small"><div class="empty-ico">${icon("utensils", 36)}</div><div class="empty-title">Замовлення порожнє</div><div class="empty-text">Додайте страви з меню.</div></div>`}
+      <button class="btn btn-add-dish" onclick="openDishPicker('${t.id}')">${icon("plus", 18)} Додати страву</button>
     </div>
     <div class="order-footer">
       <div class="totals">
-        ${svc > 0 ? `<div class="totals-row muted"><span>Сумма (${tableQty(t)} ${plural(tableQty(t), "поз.", "поз.", "поз.")})</span><span>${money(subtotal)}</span></div>
-        <div class="totals-row muted"><span>Обслуживание ${state.settings.service}%</span><span>${money(svc)}</span></div>` : `<div class="totals-row muted"><span>Позиций: ${tableQty(t)}</span><span></span></div>`}
-        <div class="totals-row total"><span>Итого</span><span>${money(total)}</span></div>
+        ${svc > 0 ? `<div class="totals-row muted"><span>Сума (${tableQty(t)} ${plural(tableQty(t), "поз.", "поз.", "поз.")})</span><span>${money(subtotal)}</span></div>
+        <div class="totals-row muted"><span>Обслуговування ${state.settings.service}%</span><span>${money(svc)}</span></div>` : `<div class="totals-row muted"><span>Позицій: ${tableQty(t)}</span><span></span></div>`}
+        <div class="totals-row total"><span>Разом</span><span>${money(total)}</span></div>
       </div>
       <button class="btn btn-primary btn-block" ${t.items.length ? "" : "disabled"} onclick="showReceipt('${t.id}')">${icon("receipt", 20)} Чек</button>
     </div>`;
@@ -403,11 +403,11 @@ function renameTable(id) {
   const t = state.tables.find(x => x.id === id);
   if (!t) return;
   openModal(`
-    <div class="modal-head"><h2>Переименовать столик</h2><button class="icon-btn" onclick="closeModal()">${icon("x", 20)}</button></div>
-    <label class="field"><span>Название</span><input id="tblName" type="text" value="${esc(t.name)}"></label>
+    <div class="modal-head"><h2>Перейменувати столик</h2><button class="icon-btn" onclick="closeModal()">${icon("x", 20)}</button></div>
+    <label class="field"><span>Назва</span><input id="tblName" type="text" value="${esc(t.name)}"></label>
     <div class="modal-actions">
-      <button class="btn" onclick="closeModal()">Отмена</button>
-      <button class="btn btn-primary" onclick="saveRenameTable('${id}')">Сохранить</button>
+      <button class="btn" onclick="closeModal()">Скасувати</button>
+      <button class="btn btn-primary" onclick="saveRenameTable('${id}')">Зберегти</button>
     </div>`);
   setTimeout(() => { const i = $("#tblName"); i.focus(); i.select(); }, 50);
 }
@@ -437,12 +437,12 @@ function confirmCloseTable(id) {
   if (!t) return;
   const hasOrder = t.items.length > 0;
   openModal(`
-    <div class="modal-head"><h2>Закрыть столик?</h2><button class="icon-btn" onclick="closeModal()">${icon("x", 20)}</button></div>
-    <p class="modal-text">«${esc(t.name)}» будет удалён${hasOrder ? ", а заказ очищен" : ""}. ${hasOrder ? "Сохранить чек в историю перед закрытием?" : ""}</p>
+    <div class="modal-head"><h2>Закрити столик?</h2><button class="icon-btn" onclick="closeModal()">${icon("x", 20)}</button></div>
+    <p class="modal-text">«${esc(t.name)}» буде видалено${hasOrder ? ", а замовлення очищено" : ""}. ${hasOrder ? "Зберегти чек в історію перед закриттям?" : ""}</p>
     <div class="modal-actions column">
-      ${hasOrder ? `<button class="btn btn-success btn-block" onclick="closeTable('${id}', true)">${icon("check", 18)} Оплачено — сохранить в историю</button>` : ""}
-      <button class="btn btn-danger btn-block" onclick="closeTable('${id}', false)">${icon("trash", 18)} ${hasOrder ? "Удалить без сохранения" : "Удалить столик"}</button>
-      <button class="btn btn-block" onclick="closeModal()">Отмена</button>
+      ${hasOrder ? `<button class="btn btn-success btn-block" onclick="closeTable('${id}', true)">${icon("check", 18)} Сплачено — зберегти в історію</button>` : ""}
+      <button class="btn btn-danger btn-block" onclick="closeTable('${id}', false)">${icon("trash", 18)} ${hasOrder ? "Видалити без збереження" : "Видалити столик"}</button>
+      <button class="btn btn-block" onclick="closeModal()">Скасувати</button>
     </div>`);
 }
 function closeTable(id, saveToHistory) {
@@ -465,7 +465,7 @@ function closeTable(id, saveToHistory) {
   state.tables = state.tables.filter(x => x.id !== id);
   save();
   closeModal();
-  toast(saveToHistory ? "Чек сохранён в историю" : "Столик закрыт");
+  toast(saveToHistory ? "Чек збережено в історію" : "Столик закрито");
   go("tables");
 }
 
@@ -473,17 +473,17 @@ function closeTable(id, saveToHistory) {
 function openDishPicker(tableId) {
   if (!state.menu.length) {
     openModal(`
-      <div class="modal-head"><h2>Меню пустое</h2><button class="icon-btn" onclick="closeModal()">${icon("x", 20)}</button></div>
-      <p class="modal-text">Сначала добавьте блюда в меню.</p>
+      <div class="modal-head"><h2>Меню порожнє</h2><button class="icon-btn" onclick="closeModal()">${icon("x", 20)}</button></div>
+      <p class="modal-text">Спочатку додайте страви в меню.</p>
       <div class="modal-actions">
-        <button class="btn" onclick="closeModal()">Закрыть</button>
-        <button class="btn btn-primary" onclick="closeModal(); go('menu')">Открыть меню</button>
+        <button class="btn" onclick="closeModal()">Закрити</button>
+        <button class="btn btn-primary" onclick="closeModal(); go('menu')">Відкрити меню</button>
       </div>`);
     return;
   }
   openModal(`
-    <div class="modal-head"><h2>Добавить блюдо</h2><button class="icon-btn" onclick="closeModal(); render()">${icon("x", 20)}</button></div>
-    <label class="field search-field">${icon("search", 18, "dim")}<input id="dishSearch" type="text" placeholder="Поиск по меню…" oninput="filterDishes(this.value)" autocomplete="off"></label>
+    <div class="modal-head"><h2>Додати страву</h2><button class="icon-btn" onclick="closeModal(); render()">${icon("x", 20)}</button></div>
+    <label class="field search-field">${icon("search", 18, "dim")}<input id="dishSearch" type="text" placeholder="Пошук по меню…" oninput="filterDishes(this.value)" autocomplete="off"></label>
     <div class="picker-list" id="pickerList">${renderPickerList(tableId, "")}</div>
     <div class="modal-actions"><button class="btn btn-primary btn-block" onclick="closeModal(); render()">Готово</button></div>`);
   openDishPicker._table = tableId;
@@ -498,10 +498,10 @@ function renderPickerList(tableId, q) {
   const cats = {};
   state.menu
     .filter(m => !query || m.name.toLowerCase().includes(query))
-    .forEach(m => { (cats[m.category || "Прочее"] ||= []).push(m); });
+    .forEach(m => { (cats[m.category || "Інше"] ||= []).push(m); });
 
   const keys = Object.keys(cats);
-  if (!keys.length) return `<div class="picker-empty muted">Ничего не найдено</div>`;
+  if (!keys.length) return `<div class="picker-empty muted">Нічого не знайдено</div>`;
 
   return keys.map(cat => `
     <div class="picker-cat">${esc(cat)}</div>
@@ -538,9 +538,9 @@ function showReceipt(tableId) {
   if (!t || !t.items.length) return;
   openModal(receiptHtml(receiptFromTable(t)) + `
     <div class="modal-actions column receipt-actions">
-      <button class="btn btn-primary btn-block" onclick="printReceipt()">${icon("print", 20)} Печать чека</button>
-      <button class="btn btn-success btn-block" onclick="closeModal(); confirmCloseTable('${tableId}')">${icon("check", 18)} Оплачено и закрыть</button>
-      <button class="btn btn-block" onclick="closeModal()">Закрыть</button>
+      <button class="btn btn-primary btn-block" onclick="printReceipt()">${icon("print", 20)} Друк чека</button>
+      <button class="btn btn-success btn-block" onclick="closeModal(); confirmCloseTable('${tableId}')">${icon("check", 18)} Сплачено і закрити</button>
+      <button class="btn btn-block" onclick="closeModal()">Закрити</button>
     </div>`);
 }
 function receiptFromTable(t) {
@@ -582,13 +582,13 @@ function receiptHtml(rc) {
     <div class="r-divider"></div>
     <div class="r-items">${rows}</div>
     <div class="r-divider"></div>
-    <div class="r-total-row"><span>Позиций</span><span>${qty}</span></div>
+    <div class="r-total-row"><span>Позицій</span><span>${qty}</span></div>
     ${rc.service > 0 ? `
-      <div class="r-total-row"><span>Сумма</span><span>${money(rc.subtotal)}</span></div>
-      <div class="r-total-row"><span>Обслуж. ${rc.servicePct}%</span><span>${money(rc.service)}</span></div>` : ""}
-    <div class="r-total-row r-grand"><span>ИТОГО</span><span>${money(rc.total)}</span></div>
+      <div class="r-total-row"><span>Сума</span><span>${money(rc.subtotal)}</span></div>
+      <div class="r-total-row"><span>Обслуг. ${rc.servicePct}%</span><span>${money(rc.service)}</span></div>` : ""}
+    <div class="r-total-row r-grand"><span>РАЗОМ</span><span>${money(rc.total)}</span></div>
     <div class="r-divider"></div>
-    <div class="r-foot">Спасибо за визит!</div>
+    <div class="r-foot">Дякуємо за візит!</div>
   </div>`;
 }
 function printReceipt() {
@@ -604,7 +604,7 @@ function printReceipt() {
 // ====== VIEW: MENU ======
 function viewMenu() {
   const cats = {};
-  state.menu.forEach(m => { (cats[m.category || "Прочее"] ||= []).push(m); });
+  state.menu.forEach(m => { (cats[m.category || "Інше"] ||= []).push(m); });
   const keys = Object.keys(cats);
 
   const body = keys.length ? keys.map(cat => `
@@ -615,15 +615,15 @@ function viewMenu() {
           <div class="menu-item-name">${esc(m.name)}</div>
           <div class="menu-item-price muted">${money(m.price)}</div>
         </div>
-        <button class="icon-btn" onclick="editDish('${m.id}')" aria-label="Изменить">${icon("edit", 18)}</button>
-        <button class="icon-btn danger" onclick="deleteDish('${m.id}')" aria-label="Удалить">${icon("trash", 18)}</button>
+        <button class="icon-btn" onclick="editDish('${m.id}')" aria-label="Змінити">${icon("edit", 18)}</button>
+        <button class="icon-btn danger" onclick="deleteDish('${m.id}')" aria-label="Видалити">${icon("trash", 18)}</button>
       </div>`).join("")}
-  `).join("") : emptyState("menu", "Меню пустое", "Добавьте блюда, чтобы добавлять их в заказы столиков.", "Добавить блюдо", "editDish()");
+  `).join("") : emptyState("menu", "Меню порожнє", "Додайте страви, щоб додавати їх у замовлення столиків.", "Додати страву", "editDish()");
 
   return `
     <header class="topbar">
       <div class="topbar-title">${icon("menu", 22)} Меню</div>
-      <button class="icon-btn" onclick="editDish()" aria-label="Добавить блюдо">${icon("plus", 22)}</button>
+      <button class="icon-btn" onclick="editDish()" aria-label="Додати страву">${icon("plus", 22)}</button>
     </header>
     <div class="page">${body}</div>`;
 }
@@ -633,21 +633,21 @@ function editDish(id) {
   const cats = [...new Set(state.menu.map(x => x.category).filter(Boolean))];
   const datalist = cats.map(c => `<option value="${esc(c)}"></option>`).join("");
   openModal(`
-    <div class="modal-head"><h2>${m ? "Изменить блюдо" : "Новое блюдо"}</h2><button class="icon-btn" onclick="closeModal()">${icon("x", 20)}</button></div>
-    <label class="field"><span>Название</span><input id="dName" type="text" value="${m ? esc(m.name) : ""}" placeholder="Напр. Борщ" autocomplete="off"></label>
-    <label class="field"><span>Цена</span><input id="dPrice" type="number" inputmode="decimal" min="0" step="0.01" value="${m ? m.price : ""}" placeholder="0"></label>
-    <label class="field"><span>Категория</span><input id="dCat" type="text" list="catList" value="${m ? esc(m.category || "") : ""}" placeholder="Напр. Кухня" autocomplete="off"><datalist id="catList">${datalist}</datalist></label>
+    <div class="modal-head"><h2>${m ? "Змінити страву" : "Нова страва"}</h2><button class="icon-btn" onclick="closeModal()">${icon("x", 20)}</button></div>
+    <label class="field"><span>Назва</span><input id="dName" type="text" value="${m ? esc(m.name) : ""}" placeholder="Напр. Борщ" autocomplete="off"></label>
+    <label class="field"><span>Ціна</span><input id="dPrice" type="number" inputmode="decimal" min="0" step="0.01" value="${m ? m.price : ""}" placeholder="0"></label>
+    <label class="field"><span>Категорія</span><input id="dCat" type="text" list="catList" value="${m ? esc(m.category || "") : ""}" placeholder="Напр. Кухня" autocomplete="off"><datalist id="catList">${datalist}</datalist></label>
     <div class="modal-actions">
-      <button class="btn" onclick="closeModal()">Отмена</button>
-      <button class="btn btn-primary" onclick="saveDish('${id || ""}')">Сохранить</button>
+      <button class="btn" onclick="closeModal()">Скасувати</button>
+      <button class="btn btn-primary" onclick="saveDish('${id || ""}')">Зберегти</button>
     </div>`);
   setTimeout(() => $("#dName")?.focus(), 50);
 }
 function saveDish(id) {
   const name = ($("#dName").value || "").trim();
   const price = Math.max(0, parseFloat($("#dPrice").value) || 0);
-  const category = ($("#dCat").value || "").trim() || "Прочее";
-  if (!name) { toast("Введите название"); return; }
+  const category = ($("#dCat").value || "").trim() || "Інше";
+  if (!name) { toast("Введіть назву"); return; }
   if (id) {
     const m = state.menu.find(x => x.id === id);
     if (m) { m.name = name; m.price = price; m.category = category; }
@@ -662,11 +662,11 @@ function deleteDish(id) {
   const m = state.menu.find(x => x.id === id);
   if (!m) return;
   openModal(`
-    <div class="modal-head"><h2>Удалить блюдо?</h2><button class="icon-btn" onclick="closeModal()">${icon("x", 20)}</button></div>
-    <p class="modal-text">«${esc(m.name)}» будет удалено из меню. Уже добавленные в заказы позиции останутся.</p>
+    <div class="modal-head"><h2>Видалити страву?</h2><button class="icon-btn" onclick="closeModal()">${icon("x", 20)}</button></div>
+    <p class="modal-text">«${esc(m.name)}» буде видалено з меню. Вже додані в замовлення позиції залишаться.</p>
     <div class="modal-actions">
-      <button class="btn" onclick="closeModal()">Отмена</button>
-      <button class="btn btn-danger" onclick="doDeleteDish('${id}')">Удалить</button>
+      <button class="btn" onclick="closeModal()">Скасувати</button>
+      <button class="btn btn-danger" onclick="doDeleteDish('${id}')">Видалити</button>
     </div>`);
 }
 function doDeleteDish(id) {
@@ -685,20 +685,20 @@ function viewHistory() {
     <button class="card hist-item" onclick="showHistReceipt('${h.id}')">
       <div class="hist-info">
         <div class="hist-name">${esc(h.tableName)}</div>
-        <div class="hist-meta muted">${icon("clock", 13, "dim")} ${fmtDateTime(h.closedAt)} · ${qty} ${plural(qty, "позиция", "позиции", "позиций")}</div>
+        <div class="hist-meta muted">${icon("clock", 13, "dim")} ${fmtDateTime(h.closedAt)} · ${qty} ${plural(qty, "позиція", "позиції", "позицій")}</div>
       </div>
       <div class="hist-sum">${money(h.total)}</div>
       <span class="hist-chev">${icon("chevronRight", 18, "dim")}</span>
     </button>`;
-  }).join("") : emptyState("history", "История пуста", "Сюда попадают закрытые (оплаченные) чеки.", "", "");
+  }).join("") : emptyState("history", "Історія порожня", "Сюди потрапляють закриті (сплачені) чеки.", "", "");
 
   return `
     <header class="topbar">
-      <div class="topbar-title">${icon("history", 22)} История</div>
-      ${list.length ? `<button class="icon-btn danger" onclick="confirmClearHistory()" aria-label="Очистить">${icon("trash", 20)}</button>` : ""}
+      <div class="topbar-title">${icon("history", 22)} Історія</div>
+      ${list.length ? `<button class="icon-btn danger" onclick="confirmClearHistory()" aria-label="Очистити">${icon("trash", 20)}</button>` : ""}
     </header>
     <div class="page">
-      ${list.length ? `<div class="hist-summary card">${icon("wallet", 18)} Всего за всё время: <b>${money(list.reduce((s, h) => s + h.total, 0))}</b> · ${list.length} ${plural(list.length, "чек", "чека", "чеков")}</div>` : ""}
+      ${list.length ? `<div class="hist-summary card">${icon("wallet", 18)} Усього за весь час: <b>${money(list.reduce((s, h) => s + h.total, 0))}</b> · ${list.length} ${plural(list.length, "чек", "чеки", "чеків")}</div>` : ""}
       <div class="list-gap">${body}</div>
     </div>`;
 }
@@ -707,17 +707,17 @@ function showHistReceipt(id) {
   if (!h) return;
   openModal(receiptHtml(h) + `
     <div class="modal-actions column receipt-actions">
-      <button class="btn btn-primary btn-block" onclick="printReceipt()">${icon("print", 20)} Печать чека</button>
-      <button class="btn btn-block" onclick="closeModal()">Закрыть</button>
+      <button class="btn btn-primary btn-block" onclick="printReceipt()">${icon("print", 20)} Друк чека</button>
+      <button class="btn btn-block" onclick="closeModal()">Закрити</button>
     </div>`);
 }
 function confirmClearHistory() {
   openModal(`
-    <div class="modal-head"><h2>Очистить историю?</h2><button class="icon-btn" onclick="closeModal()">${icon("x", 20)}</button></div>
-    <p class="modal-text">Все сохранённые чеки будут удалены. Это действие необратимо.</p>
+    <div class="modal-head"><h2>Очистити історію?</h2><button class="icon-btn" onclick="closeModal()">${icon("x", 20)}</button></div>
+    <p class="modal-text">Усі збережені чеки буде видалено. Цю дію не можна скасувати.</p>
     <div class="modal-actions">
-      <button class="btn" onclick="closeModal()">Отмена</button>
-      <button class="btn btn-danger" onclick="clearHistory()">Очистить</button>
+      <button class="btn" onclick="closeModal()">Скасувати</button>
+      <button class="btn btn-danger" onclick="clearHistory()">Очистити</button>
     </div>`);
 }
 function clearHistory() {
@@ -725,35 +725,35 @@ function clearHistory() {
   save();
   closeModal();
   render();
-  toast("История очищена");
+  toast("Історію очищено");
 }
 
 // ====== VIEW: SETTINGS ======
 function viewSettings() {
   const s = state.settings;
   return `
-    <header class="topbar"><div class="topbar-title">${icon("settings", 22)} Настройки</div></header>
+    <header class="topbar"><div class="topbar-title">${icon("settings", 22)} Налаштування</div></header>
     <div class="page">
       <div class="card settings-card">
-        <label class="field"><span>Название заведения</span><input id="setName" type="text" value="${esc(s.restaurant)}"></label>
+        <label class="field"><span>Назва закладу</span><input id="setName" type="text" value="${esc(s.restaurant)}"></label>
         <label class="field"><span>Валюта</span><input id="setCur" type="text" maxlength="6" value="${esc(s.currency)}"></label>
-        <label class="field"><span>Обслуживание, % (0 — выключено)</span><input id="setSvc" type="number" inputmode="decimal" min="0" max="100" step="1" value="${s.service}"></label>
-        <label class="field"><span>Адрес (для чека)</span><input id="setAddr" type="text" value="${esc(s.address)}" placeholder="необязательно"></label>
-        <label class="field"><span>Телефон (для чека)</span><input id="setPhone" type="text" value="${esc(s.phone)}" placeholder="необязательно"></label>
-        <button class="btn btn-primary btn-block" onclick="saveSettings()">${icon("check", 18)} Сохранить</button>
+        <label class="field"><span>Обслуговування, % (0 — вимкнено)</span><input id="setSvc" type="number" inputmode="decimal" min="0" max="100" step="1" value="${s.service}"></label>
+        <label class="field"><span>Адреса (для чека)</span><input id="setAddr" type="text" value="${esc(s.address)}" placeholder="необов'язково"></label>
+        <label class="field"><span>Телефон (для чека)</span><input id="setPhone" type="text" value="${esc(s.phone)}" placeholder="необов'язково"></label>
+        <button class="btn btn-primary btn-block" onclick="saveSettings()">${icon("check", 18)} Зберегти</button>
       </div>
-      <div class="muted footnote">Данные хранятся локально на этом устройстве. Приложение работает офлайн. Чек печатается на чековом (термо) принтере шириной 80&nbsp;мм через диалог печати браузера.</div>
+      <div class="muted footnote">Дані зберігаються локально на цьому пристрої. Застосунок працює офлайн. Чек друкується на чековому (термо) принтері шириною 80&nbsp;мм через діалог друку браузера.</div>
     </div>`;
 }
 function saveSettings() {
   const s = state.settings;
-  s.restaurant = ($("#setName").value || "").trim() || "Мой ресторан";
+  s.restaurant = ($("#setName").value || "").trim() || "Мій ресторан";
   s.currency = ($("#setCur").value || "").trim() || "€";
   s.service = Math.max(0, Math.min(100, parseFloat($("#setSvc").value) || 0));
   s.address = ($("#setAddr").value || "").trim();
   s.phone = ($("#setPhone").value || "").trim();
   save();
-  toast("Настройки сохранены");
+  toast("Налаштування збережено");
   render();
 }
 

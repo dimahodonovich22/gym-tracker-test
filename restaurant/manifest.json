@@ -1,6 +1,6 @@
 {
-  "name": "Касса — ресторан",
-  "short_name": "Касса",
+  "name": "Каса — ресторан",
+  "short_name": "Каса",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
