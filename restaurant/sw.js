@@ -1,10 +1,9 @@
-const CACHE = "gymtracker-test-v1";
+const CACHE = "restpos-test-v1";
 const ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
-  "./program.js",
   "./icons.js",
   "./manifest.json",
   "./icon-192.png",

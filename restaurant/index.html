@@ -8,11 +8,11 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Касса">
-<link rel="manifest" href="./pos.webmanifest">
+<link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon-192.png">
 <link rel="icon" type="image/png" href="./icon-192.png">
 <title>Касса — ресторан</title>
-<link rel="stylesheet" href="./pos.css">
+<link rel="stylesheet" href="./styles.css">
 </head>
 <body>
 
@@ -23,14 +23,14 @@
   <a href="#menu" data-route="menu" data-ico="menu"><span class="ico"></span>Меню</a>
   <a href="#history" data-route="history" data-ico="history"><span class="ico"></span>История</a>
   <a href="#settings" data-route="settings" data-ico="settings"><span class="ico"></span>Настройки</a>
-  <a href="./index.html" class="ext-link" title="Трекер тренировок"><span class="ico"></span>Трекер</a>
+  <a href="../index.html" class="ext-link" title="Трекер тренировок"><span class="ico"></span>Трекер</a>
 </nav>
 
 <div id="modalBg" class="modal-bg"></div>
 <div id="toast" class="toast"></div>
 
 <script src="./icons.js"></script>
-<script src="./pos.js"></script>
+<script src="./app.js"></script>
 <script>
   // подставляем иконки в нижнюю навигацию
   document.querySelectorAll('nav.bottom a[data-ico]').forEach(a => {

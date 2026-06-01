@@ -1,7 +1,7 @@
 {
   "name": "Касса — ресторан",
   "short_name": "Касса",
-  "start_url": "./pos.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
