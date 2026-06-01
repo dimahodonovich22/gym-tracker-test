@@ -632,13 +632,23 @@ function receiptHtml(rc, pay) {
   </div>`;
 }
 function printReceipt() {
+  const sheet = document.getElementById("receiptSheet");
+  if (!sheet) return;
+  let area = document.getElementById("printArea");
+  if (!area) { area = document.createElement("div"); area.id = "printArea"; document.body.appendChild(area); }
+  const clone = sheet.cloneNode(true);
+  clone.removeAttribute("id");
+  area.innerHTML = "";
+  area.appendChild(clone);
   document.body.classList.add("printing");
   const cleanup = () => {
     document.body.classList.remove("printing");
+    area.innerHTML = "";
     window.removeEventListener("afterprint", cleanup);
   };
   window.addEventListener("afterprint", cleanup);
-  setTimeout(() => window.print(), 60);
+  // даём браузеру отрисовать клон, затем печать
+  setTimeout(() => window.print(), 120);
 }
 
 // ====== VIEW: MENU ======

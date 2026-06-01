@@ -285,19 +285,24 @@ nav.bottom a.ext-link { color: var(--muted); opacity: 0.8; }
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+/* Контейнер только для печати — на экране скрыт */
+#printArea { display: none; }
+
 /* ====== PRINT — чековый термопринтер (лента ~80мм) ====== */
 @media print {
   @page { size: 80mm auto; margin: 0; }
-  body { background: #fff; max-width: none; padding: 0; }
-  body * { visibility: hidden !important; }
-  .receipt-print, .receipt-print * { visibility: visible !important; }
-  .receipt-print {
-    position: absolute; left: 0; top: 0;
-    width: 80mm; max-width: 80mm; margin: 0; padding: 3mm 3mm 6mm;
-    border-radius: 0; background: #fff; color: #000;
-    font-size: 11px; box-shadow: none;
+  html, body { background: #fff !important; }
+  body { max-width: none; margin: 0; padding: 0; }
+  /* печатаем только клон чека, всё остальное прячем */
+  body.printing > *:not(#printArea) { display: none !important; }
+  body.printing #printArea { display: block !important; }
+  #printArea .receipt-print {
+    position: static; width: 80mm; max-width: 80mm; margin: 0 auto; padding: 3mm 3mm 6mm;
+    border-radius: 0; background: #fff; color: #000; font-size: 11px; box-shadow: none;
   }
-  .r-rule { border-top: 1px dashed #000; }
-  .r-bar { background: #000 !important; color: #fff !important; }
-  nav.bottom, .modal-bg, .toast { display: none !important; }
+  #printArea .r-rule { border-top: 1px dashed #000; }
+  #printArea .r-bar {
+    background: #000 !important; color: #fff !important;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
 }
