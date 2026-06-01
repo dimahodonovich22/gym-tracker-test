@@ -7,43 +7,201 @@ const DEFAULT_STATE = {
   menu: [],            // { id, name, price, category }
   history: [],         // { id, tableName, items, subtotal, service, servicePct, total, closedAt }
   settings: {
-    restaurant: "Мой ресторан",
+    restaurant: "Vyshnia House",
     currency: "€",
     service: 0,        // процент обслуживания, 0 = выключено
     address: "",
     phone: "",
   },
   seeded: false,
+  menuVersion: 0,
 };
+
+const MENU_VERSION = 2;
+const MENU = [
+  // Cold Appetizers
+  ["1 · Cossack's appetizer platter", 27, "Cold Appetizers"],
+  ["2 · White Gold of Ukraine (lard)", 10, "Cold Appetizers"],
+  ["3 · Lard assortment", 16, "Cold Appetizers"],
+  ["4 · Artisan lard spreads", 13, "Cold Appetizers"],
+  ["5 · Veal and chicken aspic", 12, "Cold Appetizers"],
+  ["6 · Cheese plate", 9, "Cold Appetizers"],
+  ["7 · Village-style herring", 14, "Cold Appetizers"],
+  ["8 · Salted fish with fried potatoes", 14, "Cold Appetizers"],
+  ["9 · Fresh seasonal vegetables", 7, "Cold Appetizers"],
+  ["10 · Cured meat platter", 18, "Cold Appetizers"],
+  ["11 · Pickled mushrooms", 12, "Cold Appetizers"],
+  ["12 · Olives", 5, "Cold Appetizers"],
+  ["13 · Grandma's pantry pickles", 14, "Cold Appetizers"],
+  ["14 · Homemade Ukrainian blood sausage", 6, "Cold Appetizers"],
+  // Salads
+  ["15 · Greek salad", 11, "Salads"],
+  ["16 · Caesar salad with chicken and bacon", 16, "Salads"],
+  ["17 · Caesar salad with salmon", 16, "Salads"],
+  ["18 · Shuba (beet & herring salad)", 15, "Salads"],
+  ["19 · Olivier salad", 15, "Salads"],
+  ["20 · Salad with beef tongue", 15, "Salads"],
+  ["21 · Shrimp salad", 16, "Salads"],
+  ["22 · Eggplant appetizer", 9, "Salads"],
+  ["23 · Ukrainian fermented cabbage salad", 6, "Salads"],
+  // Soups
+  ["24 · Ukrainian borscht", 14, "Soups"],
+  ["25 · Okroshka (cold soup)", 12, "Soups"],
+  ["26 · Chicken broth (just like mum's)", 9, "Soups"],
+  ["27 · Solyanka (smoked soup)", 16, "Soups"],
+  // Side Dishes
+  ["28 · Banosh with cheese and bacon", 16, "Side Dishes"],
+  ["29 · Boiled young potatoes with bacon", 9, "Side Dishes"],
+  ["30 · Mashed potatoes", 7, "Side Dishes"],
+  ["31 · Country-style potatoes", 8, "Side Dishes"],
+  ["32 · French fries", 8, "Side Dishes"],
+  ["33 · Rice with vegetables", 7, "Side Dishes"],
+  // Varenyky & Halushky
+  ["34 · Varenyky with potato", 12, "Varenyky & Halushky"],
+  ["35 · Varenyky with stewed cabbage", 12, "Varenyky & Halushky"],
+  ["36 · Varenyky with potato and liver", 14, "Varenyky & Halushky"],
+  ["37 · Varenyky with cherries", 17, "Varenyky & Halushky"],
+  ["38 · Sweet varenyky with cottage cheese", 17, "Varenyky & Halushky"],
+  ["39 · Potato and cheese halushky", 14, "Varenyky & Halushky"],
+  // Pelmeni
+  ["40 · Chicken pelmeni", 17, "Pelmeni"],
+  ["41 · Veal pelmeni", 17, "Pelmeni"],
+  ["42 · Pork and veal pelmeni", 17, "Pelmeni"],
+  // Deruny
+  ["43 · Traditional Deruny", 11, "Deruny"],
+  ["44 · Deruny with mushrooms", 13, "Deruny"],
+  ["45 · Deruny with cheese and herbs", 14, "Deruny"],
+  ["46 · Deruny with chicken", 15, "Deruny"],
+  ["47 · Deruny with meat", 15, "Deruny"],
+  // Crepes
+  ["48 · Crepes with cottage cheese (sweet)", 12, "Crepes"],
+  ["49 · Crepes with cherries", 14, "Crepes"],
+  ["50 · Crepes with banana and chocolate", 10, "Crepes"],
+  ["51 · Crepes with chicken and cheese", 14, "Crepes"],
+  ["52 · Crepes with meat", 14, "Crepes"],
+  ["53 · Crepes with salmon", 12, "Crepes"],
+  // Hot Dishes — Meat
+  ["54 · Cabbage rolls with sour cream", 19, "Hot Dishes — Meat"],
+  ["55 · Kyiv cutlet", 21, "Hot Dishes — Meat"],
+  ["56 · Crispy chicken wings with sauce", 19, "Hot Dishes — Meat"],
+  ["57 · Pork ribs with cherry sauce", 22, "Hot Dishes — Meat"],
+  ["58 · Fried pork with onions", 21, "Hot Dishes — Meat"],
+  ["59 · Veal fillet in creamy sauce", 22, "Hot Dishes — Meat"],
+  ["60 · Baked veal with mushroom sauce", 27, "Hot Dishes — Meat"],
+  // Hot Dishes — Fish
+  ["61 · Salmon steak", 27, "Hot Dishes — Fish"],
+  ["62 · Baked mackerel", 27, "Hot Dishes — Fish"],
+  ["63 · Cossack-style fish steak", 27, "Hot Dishes — Fish"],
+  ["64 · Fish cutlets with mashed potatoes", 22, "Hot Dishes — Fish"],
+  ["65 · Shrimps in cream sauce", 22, "Hot Dishes — Fish"],
+  // Desserts
+  ["66 · Monastyrska Izba (cherry & cream)", 11, "Desserts"],
+  ["67 · Syrnyky (3 pcs)", 11, "Desserts"],
+  ["68 · Napoleon cake", 9, "Desserts"],
+  ["69 · Cheesecake with berry sauce", 10, "Desserts"],
+  ["70 · Spartak cake", 11, "Desserts"],
+  ["71 · Walnut-shaped cookies (1 pc)", 2.5, "Desserts"],
+  ["72 · Ice cream", 6, "Desserts"],
+  // Tea
+  ["Classic black tea", 4.5, "Tea"],
+  ["Classic green tea", 4.5, "Tea"],
+  ["Ukrainian steppe herbal tea", 5, "Tea"],
+  ["Mint tea", 5, "Tea"],
+  ["Ginger tea", 6, "Tea"],
+  ["Raspberry tea", 6, "Tea"],
+  ["Cherry tea", 6, "Tea"],
+  // Coffee
+  ["Espresso", 4, "Coffee"],
+  ["Americano", 4, "Coffee"],
+  ["Cappuccino", 5, "Coffee"],
+  ["Latte", 5, "Coffee"],
+  // Sparkling Wines
+  ["Cava (Spain), glass", 7, "Sparkling Wines"],
+  ["Cava (Spain), bottle", 35, "Sparkling Wines"],
+  ["Prosecco (Italy), glass", 7, "Sparkling Wines"],
+  ["Prosecco (Italy), bottle", 35, "Sparkling Wines"],
+  // Wines
+  ["White wine, glass", 7, "Wines"],
+  ["White wine, bottle", 35, "Wines"],
+  ["Rosé wine, glass", 7, "Wines"],
+  ["Rosé wine, bottle", 35, "Wines"],
+  ["Red wine, glass", 7, "Wines"],
+  ["Red wine, bottle", 35, "Wines"],
+  // Spirits
+  ["Vodka Nemiroff (100ml)", 8, "Spirits"],
+  ["Vodka Finlandia (100ml)", 8, "Spirits"],
+  ["Whisky Ballantine's (50ml)", 8, "Spirits"],
+  ["Whisky Jameson (50ml)", 9, "Spirits"],
+  ["Becherovka (50ml)", 8, "Spirits"],
+  ["Tequila (50ml)", 9, "Spirits"],
+  ["Sambuca (50ml)", 9, "Spirits"],
+  ["Bacardi Rum (50ml)", 8, "Spirits"],
+  ["Beefeater Gin (50ml)", 8, "Spirits"],
+  ["Martini (50ml)", 7, "Spirits"],
+  // Beer
+  ["Jupiler", 3.5, "Beer"],
+  ["Stella", 4, "Beer"],
+  ["Leffe Blond", 5, "Beer"],
+  ["Leffe Blond 0.0%", 5, "Beer"],
+  ["Leffe Bruin", 5, "Beer"],
+  ["Leffe Bruin 0.0%", 5, "Beer"],
+  ["Liefmans Fruitesse (cherry beer)", 4.5, "Beer"],
+  ["Duvel", 5.5, "Beer"],
+  ["Karmeliet", 6, "Beer"],
+  ["Beer nuts (80g)", 4, "Beer"],
+  ["Potato chips (50g)", 4, "Beer"],
+  // Cocktails
+  ["Aperol spritz", 13, "Cocktails"],
+  ["Cherry spritz", 14, "Cocktails"],
+  ["Mojito", 13, "Cocktails"],
+  ["Cherry mojito", 14, "Cocktails"],
+  // Infusions (shot)
+  ["Cherry infusion", 4.5, "Infusions (shot)"],
+  ["Blackberry infusion", 4.5, "Infusions (shot)"],
+  ["Raspberry infusion", 4.5, "Infusions (shot)"],
+  ["Strawberry infusion", 4.5, "Infusions (shot)"],
+  ["Blackcurrant infusion", 4.5, "Infusions (shot)"],
+  ["Lemon infusion", 4.5, "Infusions (shot)"],
+  ["Horseradish infusion", 4.5, "Infusions (shot)"],
+  ["Pepper infusion", 4.5, "Infusions (shot)"],
+  // Soft Drinks
+  ["Mineral water (sparkling/still)", 4, "Soft Drinks"],
+  ["Natural juices (assorted)", 4.5, "Soft Drinks"],
+  ["Cola / Fanta / Sprite", 4, "Soft Drinks"],
+  ["Compote / uzvar, glass 0.30L", 3, "Soft Drinks"],
+  ["Compote / uzvar, jug", 10, "Soft Drinks"],
+  ["Red Bull (0.25 l)", 5, "Soft Drinks"],
+  ["Milkshake (0.30 l)", 9, "Soft Drinks"],
+  ["Non-alcoholic mojito (0.35 l)", 9, "Soft Drinks"],
+].map(([name, price, category]) => ({ name, price, category }));
 
 function load() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return seed(structuredClone(DEFAULT_STATE));
     const parsed = JSON.parse(raw);
-    return {
+    const s = {
       ...structuredClone(DEFAULT_STATE),
       ...parsed,
       settings: { ...DEFAULT_STATE.settings, ...(parsed.settings || {}) },
     };
+    // Обновляем меню до актуальной версии (загрузка меню ресторана).
+    if (s.menuVersion !== MENU_VERSION) applyMenu(s);
+    return s;
   } catch {
     return seed(structuredClone(DEFAULT_STATE));
   }
 }
 function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
 
-// Стартовое меню-плейсхолдер (заменяется реальным меню пользователя / правится в приложении).
+// Загрузка/обновление меню ресторана из канонического списка MENU.
+function applyMenu(s) {
+  s.menu = MENU.map(m => ({ id: uid(), ...m }));
+  s.menuVersion = MENU_VERSION;
+  return s;
+}
 function seed(s) {
-  s.menu = [
-    { id: uid(), name: "Борщ", price: 4.5, category: "Кухня" },
-    { id: uid(), name: "Цезарь с курицей", price: 6.9, category: "Кухня" },
-    { id: uid(), name: "Стейк рибай", price: 18.0, category: "Кухня" },
-    { id: uid(), name: "Картофель фри", price: 3.2, category: "Кухня" },
-    { id: uid(), name: "Чизкейк", price: 4.0, category: "Десерты" },
-    { id: uid(), name: "Эспрессо", price: 1.8, category: "Бар" },
-    { id: uid(), name: "Капучино", price: 2.5, category: "Бар" },
-    { id: uid(), name: "Лимонад", price: 2.8, category: "Бар" },
-  ];
+  applyMenu(s);
   s.seeded = true;
   return s;
 }
@@ -56,6 +214,7 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 
 
 // state инициализируется здесь — после объявления uid(), который использует seed()
 let state = load();
+save(); // зафиксировать загрузку/обновление меню
 
 function money(n) {
   const v = Math.round((Number(n) || 0) * 100) / 100;
