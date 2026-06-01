@@ -9,15 +9,19 @@ const DEFAULT_STATE = {
   settings: {
     restaurant: "Vyshnia House",
     currency: "€",
-    service: 0,        // процент обслуживания, 0 = выключено
-    address: "",
+    service: 0,
+    address: "Oude Koornmarkt 44A",
+    city: "2000 Antwerpen",
+    vatNumber: "BE1026823291",
     phone: "",
+    server: "",
   },
   seeded: false,
   menuVersion: 0,
+  billCounter: 1000,
 };
 
-const MENU_VERSION = 2;
+const MENU_VERSION = 3;
 const MENU = [
   // Cold Appetizers
   ["1 · Cossack's appetizer platter", 27, "Cold Appetizers"],
@@ -185,8 +189,13 @@ function load() {
       ...parsed,
       settings: { ...DEFAULT_STATE.settings, ...(parsed.settings || {}) },
     };
-    // Обновляем меню до актуальной версии (загрузка меню ресторана).
-    if (s.menuVersion !== MENU_VERSION) applyMenu(s);
+    // Обновляем меню до актуальной версии + префилл реквизитов заведения.
+    if (s.menuVersion !== MENU_VERSION) {
+      applyMenu(s);
+      s.settings.address ||= "Oude Koornmarkt 44A";
+      s.settings.city ||= "2000 Antwerpen";
+      s.settings.vatNumber ||= "BE1026823291";
+    }
     return s;
   } catch {
     return seed(structuredClone(DEFAULT_STATE));
@@ -194,9 +203,12 @@ function load() {
 }
 function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
 
+// Категории с алкоголем — ставка НДС 21% (A); остальное — 6% (C).
+const VAT_ALCOHOL = new Set(["Beer", "Cocktails", "Spirits", "Wines", "Sparkling Wines", "Infusions (shot)"]);
+function vatForCategory(cat) { return VAT_ALCOHOL.has(cat) ? 21 : 6; }
 // Загрузка/обновление меню ресторана из канонического списка MENU.
 function applyMenu(s) {
-  s.menu = MENU.map(m => ({ id: uid(), ...m }));
+  s.menu = MENU.map(m => ({ id: uid(), ...m, vat: vatForCategory(m.category) }));
   s.menuVersion = MENU_VERSION;
   return s;
 }
@@ -226,6 +238,15 @@ function fmtDateTime(iso) {
   return d.toLocaleDateString("uk-UA", { day: "2-digit", month: "2-digit", year: "numeric" }) +
     " " + d.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
 }
+// ----- формат для чека (бельгийский: запятая-разделитель, 2 знака) -----
+function euro(n) { return (Math.round((Number(n) || 0) * 100) / 100).toFixed(2).replace(".", ","); }
+function fmtReceiptDateTime(iso) {
+  const d = new Date(iso), p = x => String(x).padStart(2, "0");
+  return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+const VAT_LETTER = { 21: "A", 12: "B", 6: "C" };
+function vatLetter(r) { return VAT_LETTER[r] || "C"; }
+function nextBillNo() { state.billCounter = (Number(state.billCounter) || 1000) + 1; return state.billCounter; }
 
 function toast(msg) {
   const el = $("#toast");
@@ -454,6 +475,7 @@ function closeTable(id, saveToHistory) {
     state.history.unshift({
       id: uid(),
       tableName: t.name,
+      billNo: t.billNo,
       items: structuredClone(t.items),
       subtotal,
       service: svc,
@@ -525,70 +547,85 @@ function addDish(tableId, menuId) {
   if (!t || !m) return;
   const existing = t.items.find(i => i.menuId === m.id);
   if (existing) existing.qty += 1;
-  else t.items.push({ id: uid(), menuId: m.id, name: m.name, price: m.price, qty: 1 });
+  else t.items.push({ id: uid(), menuId: m.id, name: m.name, price: m.price, vat: m.vat ?? 6, qty: 1 });
   save();
   // обновляем только список выбора, чтобы поиск/скролл не сбрасывались
   const list = $("#pickerList");
   if (list) list.innerHTML = renderPickerList(tableId, $("#dishSearch")?.value || "");
 }
 
-// ====== RECEIPT (чек) ======
-function showReceipt(tableId) {
+// ====== RECEIPT (rekening, нидерландский формат) ======
+function payToggleHtml(call, pay) {
+  return `<div class="pay-toggle">
+      <button class="btn ${pay === "Kaart" ? "btn-primary" : ""}" onclick="${call.replace("%P", "Kaart")}">Kaart</button>
+      <button class="btn ${pay === "Contant" ? "btn-primary" : ""}" onclick="${call.replace("%P", "Contant")}">Contant</button>
+    </div>`;
+}
+function showReceipt(tableId, pay) {
   const t = state.tables.find(x => x.id === tableId);
   if (!t || !t.items.length) return;
-  openModal(receiptHtml(receiptFromTable(t)) + `
+  if (!t.billNo) { t.billNo = nextBillNo(); save(); }
+  pay = pay || "Kaart";
+  openModal(receiptHtml(receiptFromTable(t), pay) +
+    payToggleHtml(`showReceipt('${tableId}', '%P')`, pay) + `
     <div class="modal-actions column receipt-actions">
-      <button class="btn btn-primary btn-block" onclick="printReceipt()">${icon("print", 20)} Друк чека</button>
+      <button class="btn btn-primary btn-block" onclick="printReceipt()">${icon("print", 20)} Друк рахунку</button>
       <button class="btn btn-success btn-block" onclick="closeModal(); confirmCloseTable('${tableId}')">${icon("check", 18)} Сплачено і закрити</button>
       <button class="btn btn-block" onclick="closeModal()">Закрити</button>
     </div>`);
 }
 function receiptFromTable(t) {
-  const subtotal = tableSubtotal(t);
-  const svc = serviceAmount(subtotal);
-  return {
-    tableName: t.name,
-    items: t.items,
-    subtotal,
-    service: svc,
-    servicePct: Number(state.settings.service) || 0,
-    total: subtotal + svc,
-    closedAt: new Date().toISOString(),
-  };
+  return { tableName: t.name, items: t.items, billNo: t.billNo, closedAt: new Date().toISOString() };
 }
-function receiptHtml(rc) {
+function receiptHtml(rc, pay) {
   const s = state.settings;
-  const qty = (rc.items || []).reduce((n, i) => n + i.qty, 0);
-  const rows = rc.items.map(i => `
-    <div class="r-item">
-      <div class="r-item-name">${esc(i.name)}</div>
-      <div class="r-item-line">
-        <span class="r-item-calc">${i.qty} × ${money(i.price)}</span>
-        <span class="r-item-sum">${money(i.price * i.qty)}</span>
-      </div>
+  pay = pay || "Kaart";
+  const r2 = n => Math.round(n * 100) / 100;
+  const total = rc.items.reduce((sum, i) => sum + i.price * i.qty, 0);
+  // группировка по ставкам НДС
+  const groups = {};
+  rc.items.forEach(i => { const r = i.vat ?? 6; groups[r] = (groups[r] || 0) + i.price * i.qty; });
+  const rates = Object.keys(groups).map(Number).sort((a, b) => b - a);
+  let totVat = 0, totExcl = 0, totIncl = 0;
+  const vatRows = rates.map(r => {
+    const incl = r2(groups[r]), excl = r2(incl / (1 + r / 100)), vat = r2(incl - excl);
+    totVat += vat; totExcl += excl; totIncl += incl;
+    return `<div class="r-vat"><span>${vatLetter(r)} ${r}%</span><span>${euro(vat)}</span><span>${euro(excl)}</span><span>${euro(incl)}</span></div>`;
+  }).join("");
+  const itemRows = rc.items.map(i => `
+    <div class="r-line">
+      <span class="r-q">${i.qty}</span>
+      <span class="r-d">${esc(i.name)}</span>
+      <span class="r-ep">${euro(i.price)}</span>
+      <span class="r-tot">${euro(i.price * i.qty)}</span>
+      <span class="r-vl">${vatLetter(i.vat ?? 6)}</span>
     </div>`).join("");
   return `
   <div class="receipt-print" id="receiptSheet">
+    <div class="r-bar">${esc(s.restaurant || "RESTAURANT")}</div>
     <div class="r-head">
-      <div class="r-store">${esc(s.restaurant || "Ресторан")}</div>
       ${s.address ? `<div class="r-sub">${esc(s.address)}</div>` : ""}
-      ${s.phone ? `<div class="r-sub">тел. ${esc(s.phone)}</div>` : ""}
+      ${s.city ? `<div class="r-sub">${esc(s.city)}</div>` : ""}
+      ${s.vatNumber ? `<div class="r-sub">BTW ${esc(s.vatNumber)}</div>` : ""}
     </div>
-    <div class="r-divider"></div>
+    <div class="r-rule"></div>
     <div class="r-meta">
-      <div>${esc(rc.tableName)}</div>
-      <div>${fmtDateTime(rc.closedAt)}</div>
+      <div class="r-mrow"><span>Tafel: ${esc(rc.tableName)}</span><span>${fmtReceiptDateTime(rc.closedAt)}</span></div>
+      <div class="r-mrow"><span>Rek. nr: ${rc.billNo ?? "-"}</span><span></span></div>
+      ${s.server ? `<div class="r-mrow"><span>Bediend door: ${esc(s.server)}</span><span></span></div>` : ""}
     </div>
-    <div class="r-divider"></div>
-    <div class="r-items">${rows}</div>
-    <div class="r-divider"></div>
-    <div class="r-total-row"><span>Позицій</span><span>${qty}</span></div>
-    ${rc.service > 0 ? `
-      <div class="r-total-row"><span>Сума</span><span>${money(rc.subtotal)}</span></div>
-      <div class="r-total-row"><span>Обслуг. ${rc.servicePct}%</span><span>${money(rc.service)}</span></div>` : ""}
-    <div class="r-total-row r-grand"><span>РАЗОМ</span><span>${money(rc.total)}</span></div>
-    <div class="r-divider"></div>
-    <div class="r-foot">Дякуємо за візит!</div>
+    <div class="r-rule"></div>
+    <div class="r-line r-lhead"><span class="r-q">Qty</span><span class="r-d">Omschrijving</span><span class="r-ep">E.P.</span><span class="r-tot">Totaal</span><span class="r-vl"></span></div>
+    ${itemRows}
+    <div class="r-rule"></div>
+    <div class="r-grandrow"><span>Algemeen Totaal:</span><span>${euro(total)}</span></div>
+    <div class="r-payrow"><span>${esc(pay)}</span><span>${euro(total)}</span></div>
+    <div class="r-rule"></div>
+    <div class="r-vat r-vathead"><span>BTW%</span><span>BTW:</span><span>Excl.:</span><span>Incl.:</span></div>
+    ${vatRows}
+    <div class="r-rule"></div>
+    <div class="r-vat r-vattot"><span>Totaal:</span><span>${euro(totVat)}</span><span>${euro(totExcl)}</span><span>${euro(totIncl)}</span></div>
+    <div class="r-foot">Bedankt voor uw bezoek!</div>
   </div>`;
 }
 function printReceipt() {
@@ -632,10 +669,15 @@ function editDish(id) {
   const m = id ? state.menu.find(x => x.id === id) : null;
   const cats = [...new Set(state.menu.map(x => x.category).filter(Boolean))];
   const datalist = cats.map(c => `<option value="${esc(c)}"></option>`).join("");
+  const dvat = m ? (m.vat ?? 6) : 6;
   openModal(`
     <div class="modal-head"><h2>${m ? "Змінити страву" : "Нова страва"}</h2><button class="icon-btn" onclick="closeModal()">${icon("x", 20)}</button></div>
     <label class="field"><span>Назва</span><input id="dName" type="text" value="${m ? esc(m.name) : ""}" placeholder="Напр. Борщ" autocomplete="off"></label>
     <label class="field"><span>Ціна</span><input id="dPrice" type="number" inputmode="decimal" min="0" step="0.01" value="${m ? m.price : ""}" placeholder="0"></label>
+    <label class="field"><span>ПДВ (BTW)</span><select id="dVat">
+      <option value="6"${dvat === 6 ? " selected" : ""}>6% (C) — їжа, безалкогольне</option>
+      <option value="21"${dvat === 21 ? " selected" : ""}>21% (A) — алкоголь</option>
+    </select></label>
     <label class="field"><span>Категорія</span><input id="dCat" type="text" list="catList" value="${m ? esc(m.category || "") : ""}" placeholder="Напр. Кухня" autocomplete="off"><datalist id="catList">${datalist}</datalist></label>
     <div class="modal-actions">
       <button class="btn" onclick="closeModal()">Скасувати</button>
@@ -647,12 +689,13 @@ function saveDish(id) {
   const name = ($("#dName").value || "").trim();
   const price = Math.max(0, parseFloat($("#dPrice").value) || 0);
   const category = ($("#dCat").value || "").trim() || "Інше";
+  const vat = parseInt($("#dVat").value) === 21 ? 21 : 6;
   if (!name) { toast("Введіть назву"); return; }
   if (id) {
     const m = state.menu.find(x => x.id === id);
-    if (m) { m.name = name; m.price = price; m.category = category; }
+    if (m) { m.name = name; m.price = price; m.category = category; m.vat = vat; }
   } else {
-    state.menu.push({ id: uid(), name, price, category });
+    state.menu.push({ id: uid(), name, price, category, vat });
   }
   save();
   closeModal();
@@ -702,12 +745,14 @@ function viewHistory() {
       <div class="list-gap">${body}</div>
     </div>`;
 }
-function showHistReceipt(id) {
+function showHistReceipt(id, pay) {
   const h = state.history.find(x => x.id === id);
   if (!h) return;
-  openModal(receiptHtml(h) + `
+  pay = pay || "Kaart";
+  openModal(receiptHtml(h, pay) +
+    payToggleHtml(`showHistReceipt('${id}', '%P')`, pay) + `
     <div class="modal-actions column receipt-actions">
-      <button class="btn btn-primary btn-block" onclick="printReceipt()">${icon("print", 20)} Друк чека</button>
+      <button class="btn btn-primary btn-block" onclick="printReceipt()">${icon("print", 20)} Друк рахунку</button>
       <button class="btn btn-block" onclick="closeModal()">Закрити</button>
     </div>`);
 }
@@ -736,22 +781,26 @@ function viewSettings() {
     <div class="page">
       <div class="card settings-card">
         <label class="field"><span>Назва закладу</span><input id="setName" type="text" value="${esc(s.restaurant)}"></label>
+        <label class="field"><span>Адреса</span><input id="setAddr" type="text" value="${esc(s.address)}" placeholder="напр. Oude Koornmarkt 44A"></label>
+        <label class="field"><span>Місто / індекс</span><input id="setCity" type="text" value="${esc(s.city || "")}" placeholder="напр. 2000 Antwerpen"></label>
+        <label class="field"><span>BTW-номер (ПДВ)</span><input id="setVat" type="text" value="${esc(s.vatNumber || "")}" placeholder="напр. BE1026823291"></label>
+        <label class="field"><span>Телефон</span><input id="setPhone" type="text" value="${esc(s.phone)}" placeholder="необов'язково"></label>
+        <label class="field"><span>Bediend door (офіціант, для чека)</span><input id="setServer" type="text" value="${esc(s.server || "")}" placeholder="необов'язково"></label>
         <label class="field"><span>Валюта</span><input id="setCur" type="text" maxlength="6" value="${esc(s.currency)}"></label>
-        <label class="field"><span>Обслуговування, % (0 — вимкнено)</span><input id="setSvc" type="number" inputmode="decimal" min="0" max="100" step="1" value="${s.service}"></label>
-        <label class="field"><span>Адреса (для чека)</span><input id="setAddr" type="text" value="${esc(s.address)}" placeholder="необов'язково"></label>
-        <label class="field"><span>Телефон (для чека)</span><input id="setPhone" type="text" value="${esc(s.phone)}" placeholder="необов'язково"></label>
         <button class="btn btn-primary btn-block" onclick="saveSettings()">${icon("check", 18)} Зберегти</button>
       </div>
-      <div class="muted footnote">Дані зберігаються локально на цьому пристрої. Застосунок працює офлайн. Чек друкується на чековому (термо) принтері шириною 80&nbsp;мм через діалог друку браузера.</div>
+      <div class="muted footnote">Дані зберігаються локально на цьому пристрої. Застосунок працює офлайн. Друкований документ — <b>рахунок (rekening)</b> у форматі вашого чека, ширина 80&nbsp;мм. Це не фіскальний BTW-чек: офіційний фіскальний чек і далі друкує ваша зареєстрована каса.</div>
     </div>`;
 }
 function saveSettings() {
   const s = state.settings;
-  s.restaurant = ($("#setName").value || "").trim() || "Мій ресторан";
-  s.currency = ($("#setCur").value || "").trim() || "€";
-  s.service = Math.max(0, Math.min(100, parseFloat($("#setSvc").value) || 0));
+  s.restaurant = ($("#setName").value || "").trim() || "Vyshnia House";
   s.address = ($("#setAddr").value || "").trim();
+  s.city = ($("#setCity").value || "").trim();
+  s.vatNumber = ($("#setVat").value || "").trim();
   s.phone = ($("#setPhone").value || "").trim();
+  s.server = ($("#setServer").value || "").trim();
+  s.currency = ($("#setCur").value || "").trim() || "€";
   save();
   toast("Налаштування збережено");
   render();
