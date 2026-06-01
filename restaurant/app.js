@@ -604,11 +604,12 @@ function receiptHtml(rc, pay) {
     </div>`).join("");
   return `
   <div class="receipt-print" id="receiptSheet">
-    <div class="r-bar">${esc(s.restaurant || "RESTAURANT")}</div>
+    <div class="r-bar">BTW KASTICKET</div>
     <div class="r-head">
+      <div class="r-store">${esc(s.restaurant || "RESTAURANT")}</div>
       ${s.address ? `<div class="r-sub">${esc(s.address)}</div>` : ""}
       ${s.city ? `<div class="r-sub">${esc(s.city)}</div>` : ""}
-      ${s.vatNumber ? `<div class="r-sub">BTW ${esc(s.vatNumber)}</div>` : ""}
+      ${s.vatNumber ? `<div class="r-sub">${esc(s.vatNumber)}</div>` : ""}
     </div>
     <div class="r-rule"></div>
     <div class="r-meta">
@@ -791,7 +792,7 @@ function viewSettings() {
         <label class="field"><span>Валюта</span><input id="setCur" type="text" maxlength="6" value="${esc(s.currency)}"></label>
         <button class="btn btn-primary btn-block" onclick="saveSettings()">${icon("check", 18)} Зберегти</button>
       </div>
-      <div class="muted footnote">Дані зберігаються локально на цьому пристрої. Застосунок працює офлайн. Друкований документ — <b>рахунок (rekening)</b> у форматі вашого чека, ширина 80&nbsp;мм. Це не фіскальний BTW-чек: офіційний фіскальний чек і далі друкує ваша зареєстрована каса.</div>
+      <div class="muted footnote">Дані зберігаються локально на цьому пристрої. Застосунок працює офлайн. Це <b>навчальний тренажер каси</b> для навчання персоналу — чек використовується лише в навчанні, а не з реальними клієнтами. Ширина чека 80&nbsp;мм.</div>
     </div>`;
 }
 function saveSettings() {

@@ -245,6 +245,7 @@ nav.bottom a.ext-link { color: var(--muted); opacity: 0.8; }
   -webkit-print-color-adjust: exact; print-color-adjust: exact;
 }
 .r-head { text-align: center; margin-top: 6px; }
+.r-store { font-weight: 800; font-size: 14px; }
 .r-sub { font-size: 11px; }
 .r-rule { border-top: 1px dashed #000; margin: 6px 0; }
 .r-meta { font-size: 11px; }
