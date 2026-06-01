@@ -559,15 +559,15 @@ function addDish(tableId, menuId) {
 // ====== RECEIPT (rekening, нидерландский формат) ======
 function payToggleHtml(call, pay) {
   return `<div class="pay-toggle">
-      <button class="btn ${pay === "Kaart" ? "btn-primary" : ""}" onclick="${call.replace("%P", "Kaart")}">Kaart</button>
-      <button class="btn ${pay === "Contant" ? "btn-primary" : ""}" onclick="${call.replace("%P", "Contant")}">Contant</button>
+      <button class="btn ${pay === "Card" ? "btn-primary" : ""}" onclick="${call.replace("%P", "Card")}">Card</button>
+      <button class="btn ${pay === "Cash" ? "btn-primary" : ""}" onclick="${call.replace("%P", "Cash")}">Cash</button>
     </div>`;
 }
 function showReceipt(tableId, pay) {
   const t = state.tables.find(x => x.id === tableId);
   if (!t || !t.items.length) return;
   if (!t.billNo) { t.billNo = nextBillNo(); save(); }
-  pay = pay || "Kaart";
+  pay = pay || "Card";
   openModal(receiptHtml(receiptFromTable(t), pay) +
     payToggleHtml(`showReceipt('${tableId}', '%P')`, pay) + `
     <div class="modal-actions column receipt-actions">
@@ -581,7 +581,7 @@ function receiptFromTable(t) {
 }
 function receiptHtml(rc, pay) {
   const s = state.settings;
-  pay = pay || "Kaart";
+  pay = pay || "Card";
   const r2 = n => Math.round(n * 100) / 100;
   const total = rc.items.reduce((sum, i) => sum + i.price * i.qty, 0);
   // группировка по ставкам НДС
@@ -751,7 +751,7 @@ function viewHistory() {
 function showHistReceipt(id, pay) {
   const h = state.history.find(x => x.id === id);
   if (!h) return;
-  pay = pay || "Kaart";
+  pay = pay || "Card";
   openModal(receiptHtml(h, pay) +
     payToggleHtml(`showHistReceipt('${id}', '%P')`, pay) + `
     <div class="modal-actions column receipt-actions">
