@@ -607,7 +607,7 @@ function receiptHtml(rc, pay) {
     <div class="r-bar">BTW KASTICKET</div>
     <div class="r-head">
       <div class="r-store">${esc(s.restaurant || "RESTAURANT")}</div>
-      ${s.address ? `<div class="r-sub">${esc(s.address)}</div>` : ""}
+      ${s.address ? `<div class="r-sub r-addr">${esc(s.address)}</div>` : ""}
       ${s.city ? `<div class="r-sub">${esc(s.city)}</div>` : ""}
       ${s.vatNumber ? `<div class="r-sub">${esc(s.vatNumber)}</div>` : ""}
     </div>
