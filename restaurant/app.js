@@ -520,6 +520,7 @@ function closeTable(id, saveToHistory) {
       tableName: t.name,
       billNo: t.billNo,
       fiscal: t.fiscal,
+      pay: t.pay || "Card",
       items: structuredClone(t.items),
       subtotal,
       service: svc,
@@ -610,8 +611,9 @@ function showReceipt(tableId, pay) {
   if (!t || !t.items.length) return;
   if (!t.billNo) t.billNo = nextBillNo();
   t.fiscal = { ...genFiscal(), ...(t.fiscal || {}) }; // дозаполняем недостающие поля, существующие сохраняем
-  save();
   pay = pay || "Card";
+  t.pay = pay; // запоминаем выбранный способ оплаты (для отчёта)
+  save();
   openModal(receiptHtml(receiptFromTable(t), pay) +
     payToggleHtml(`showReceipt('${tableId}', '%P')`, pay) + `
     <div class="modal-actions column receipt-actions">
@@ -808,6 +810,7 @@ function viewHistory() {
   return `
     <header class="topbar">
       <div class="topbar-title">${icon("history", 22)} Історія</div>
+      <button class="icon-btn" onclick="showDayReport()" aria-label="Звіт за день">${icon("report", 20)}</button>
       ${list.length ? `<button class="icon-btn danger" onclick="confirmClearHistory()" aria-label="Очистити">${icon("trash", 20)}</button>` : ""}
     </header>
     <div class="page">
@@ -861,7 +864,13 @@ function viewSettings() {
         <label class="field"><span>Валюта</span><input id="setCur" type="text" maxlength="6" value="${esc(s.currency)}"></label>
         <button class="btn btn-primary btn-block" onclick="saveSettings()">${icon("check", 18)} Зберегти</button>
       </div>
-      <div class="muted footnote">Дані зберігаються локально на цьому пристрої. Застосунок працює офлайн. Це <b>навчальний тренажер каси</b> для навчання персоналу — чек використовується лише в навчанні, а не з реальними клієнтами. Ширина чека 80&nbsp;мм.</div>
+      <div class="card settings-card" style="margin-top:12px">
+        <div style="font-weight:800">Резервна копія</div>
+        <div class="muted" style="font-size:13px;margin-top:-6px">Дані зберігаються лише на цьому пристрої. Регулярно завантажуйте копію — щоб не втратити меню й історію та переносити на інший планшет.</div>
+        <button class="btn btn-block" onclick="exportBackup()">${icon("download", 18)} Завантажити копію (.json)</button>
+        <button class="btn btn-block" onclick="importBackup()">${icon("upload", 18)} Відновити з файлу</button>
+      </div>
+      <div class="muted footnote">Застосунок працює офлайн. Це <b>навчальний тренажер каси</b> для навчання персоналу — чек використовується лише в навчанні, а не з реальними клієнтами. Ширина чека 80&nbsp;мм.</div>
     </div>`;
 }
 function saveSettings() {
@@ -878,12 +887,128 @@ function saveSettings() {
   render();
 }
 
+// ====== BACKUP / RESTORE ======
+function exportBackup() {
+  try {
+    const data = JSON.stringify(state, null, 2);
+    const blob = new Blob([data], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const d = new Date(), p = x => String(x).padStart(2, "0");
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `vyshnia-kasa-backup-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    toast("Резервну копію завантажено");
+  } catch { toast("Не вдалося створити копію"); }
+}
+let pendingBackup = null;
+function importBackup() {
+  const inp = document.createElement("input");
+  inp.type = "file"; inp.accept = "application/json,.json";
+  inp.addEventListener("change", () => {
+    const file = inp.files && inp.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      let parsed;
+      try { parsed = JSON.parse(reader.result); }
+      catch { toast("Не вдалося прочитати файл"); return; }
+      if (!parsed || typeof parsed !== "object" || (!parsed.menu && !parsed.history && !parsed.tables)) {
+        toast("Невірний файл копії"); return;
+      }
+      pendingBackup = parsed;
+      const cnt = (parsed.menu || []).length, hist = (parsed.history || []).length;
+      openModal(`
+        <div class="modal-head"><h2>Відновити з копії?</h2><button class="icon-btn" onclick="closeModal()">${icon("x", 20)}</button></div>
+        <p class="modal-text">Поточні дані буде <b>замінено</b> даними з файлу:<br>меню — ${cnt} позицій, історія — ${hist} чеків.</p>
+        <div class="modal-actions">
+          <button class="btn" onclick="closeModal()">Скасувати</button>
+          <button class="btn btn-primary" onclick="applyBackup()">Відновити</button>
+        </div>`);
+    };
+    reader.readAsText(file);
+  });
+  inp.click();
+}
+function applyBackup() {
+  if (!pendingBackup) return closeModal();
+  state = {
+    ...structuredClone(DEFAULT_STATE),
+    ...pendingBackup,
+    settings: { ...DEFAULT_STATE.settings, ...(pendingBackup.settings || {}) },
+  };
+  pendingBackup = null;
+  save();
+  closeModal();
+  go("tables");
+  render();
+  toast("Дані відновлено з копії");
+}
+
+// ====== DAILY REPORT (Z) ======
+function localDateKey(iso) {
+  const d = new Date(iso), p = x => String(x).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+function showDayReport(dateStr) {
+  dateStr = dateStr || localDateKey(new Date().toISOString());
+  openModal(`
+    <div class="modal-head"><h2>Денний звіт (Z)</h2><button class="icon-btn" onclick="closeModal()">${icon("x", 20)}</button></div>
+    <label class="field"><span>Дата</span><input type="date" id="repDate" value="${dateStr}" onchange="showDayReport(this.value)"></label>
+    ${dayReportSheet(dateStr)}
+    <div class="modal-actions column receipt-actions">
+      <button class="btn btn-primary btn-block" onclick="printReceipt()">${icon("print", 20)} Друк звіту</button>
+      <button class="btn btn-block" onclick="closeModal()">Закрити</button>
+    </div>`);
+}
+function dayReportSheet(dateStr) {
+  const s = state.settings;
+  const entries = state.history.filter(h => localDateKey(h.closedAt) === dateStr);
+  const r2 = n => Math.round(n * 100) / 100;
+  let total = 0; const payAgg = { Card: 0, Cash: 0 }; const groups = {};
+  entries.forEach(h => {
+    total += h.total;
+    payAgg[h.pay === "Cash" ? "Cash" : "Card"] += h.total;
+    (h.items || []).forEach(i => { const r = i.vat ?? 6; groups[r] = (groups[r] || 0) + i.price * i.qty; });
+  });
+  const rates = Object.keys(groups).map(Number).sort((a, b) => b - a);
+  let tV = 0, tE = 0, tI = 0;
+  const vatRows = rates.map(r => {
+    const incl = r2(groups[r]), excl = r2(incl / (1 + r / 100)), vat = r2(incl - excl);
+    tV += vat; tE += excl; tI += incl;
+    return `<div class="r-vat"><span>${vatLetter(r)} ${r}%</span><span>${euro(vat)}</span><span>${euro(excl)}</span><span>${euro(incl)}</span></div>`;
+  }).join("");
+  const [y, m, d] = dateStr.split("-");
+  return `
+  <div class="receipt-print" id="receiptSheet">
+    <div class="r-bar">Z-RAPPORT</div>
+    <div class="r-head">
+      <div class="r-store">${esc(s.restaurant || "")}</div>
+      <div class="r-sub">${d}.${m}.${y}</div>
+    </div>
+    <div class="r-rule"></div>
+    <div class="r-grandrow"><span>Чеків / Tickets</span><span>${entries.length}</span></div>
+    <div class="r-grandrow"><span>Виручка / Omzet</span><span>${euro(total)}</span></div>
+    <div class="r-rule"></div>
+    <div class="r-mrow"><span>Card</span><span>${euro(payAgg.Card)}</span></div>
+    <div class="r-mrow"><span>Cash</span><span>${euro(payAgg.Cash)}</span></div>
+    <div class="r-rule"></div>
+    <div class="r-vat r-vathead"><span>BTW%</span><span>BTW:</span><span>Excl.:</span><span>Incl.:</span></div>
+    ${vatRows || `<div class="r-sub">—</div>`}
+    <div class="r-rule"></div>
+    <div class="r-vat r-vattot"><span>Totaal:</span><span>${euro(tV)}</span><span>${euro(tE)}</span><span>${euro(tI)}</span></div>
+    <div class="r-foot">Z-rapport • ${esc(s.server || "")}</div>
+  </div>`;
+}
+
 // expose for inline handlers
 Object.assign(window, {
   go, addTable, saveNewTable, renameTable, saveRenameTable, changeQty,
   confirmCloseTable, closeTable, openDishPicker, filterDishes, addDish,
   showReceipt, printReceipt, editDish, saveDish, deleteDish, doDeleteDish,
   showHistReceipt, confirmClearHistory, clearHistory, saveSettings, closeModal,
+  exportBackup, importBackup, applyBackup, showDayReport,
   state, save, render, toast,
 });
 
