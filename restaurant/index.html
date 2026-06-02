@@ -23,7 +23,6 @@
   <a href="#menu" data-route="menu" data-ico="menu"><span class="ico"></span>Меню</a>
   <a href="#history" data-route="history" data-ico="history"><span class="ico"></span>Історія</a>
   <a href="#settings" data-route="settings" data-ico="settings"><span class="ico"></span>Налаштування</a>
-  <a href="../index.html" class="ext-link" title="Трекер тренувань"><span class="ico"></span>Трекер</a>
 </nav>
 
 <div id="modalBg" class="modal-bg"></div>
@@ -36,8 +35,6 @@
   document.querySelectorAll('nav.bottom a[data-ico]').forEach(a => {
     a.querySelector('.ico').innerHTML = icon(a.dataset.ico, 22);
   });
-  const ext = document.querySelector('nav.bottom a.ext-link .ico');
-  if (ext) ext.innerHTML = icon('dumbbell', 22);
 </script>
 </body>
 </html>
