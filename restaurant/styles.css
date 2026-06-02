@@ -9,9 +9,9 @@
   --line-soft: #eef0f3;
   --text: #1a1d23;
   --muted: #6b7280;
-  --accent: #0d9488;
-  --accent-2: #0d9488;
-  --accent-glow: rgba(13, 148, 136, 0.16);
+  --accent: #991B1B;
+  --accent-2: #991B1B;
+  --accent-glow: rgba(153, 27, 27, 0.16);
   --ok: #16a34a;
   --danger: #e5484d;
   --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06);
@@ -57,8 +57,8 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
 .btn:hover { background: var(--bg-3); }
 .btn:active { transform: scale(0.97); }
 .btn[disabled] { opacity: 0.45; pointer-events: none; }
-.btn-primary { background: var(--accent); border-color: transparent; color: #fff; box-shadow: 0 2px 8px rgba(13, 148, 136, 0.28); }
-.btn-primary:hover { background: #0b8276; }
+.btn-primary { background: var(--accent); border-color: transparent; color: #fff; box-shadow: 0 2px 8px rgba(153, 27, 27, 0.28); }
+.btn-primary:hover { background: #7f1414; }
 .btn-success { background: var(--ok); border-color: transparent; color: #fff; box-shadow: 0 2px 8px rgba(22, 163, 74, 0.26); }
 .btn-success:hover { background: #15913f; }
 .btn-danger { background: #fff; border-color: rgba(229, 72, 77, 0.4); color: var(--danger); box-shadow: none; }
@@ -107,14 +107,16 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
   transition: transform .08s, border-color .15s, box-shadow .15s;
 }
 .table-card:active { transform: scale(0.98); }
-.table-card.busy { border-color: rgba(13, 148, 136, 0.45); box-shadow: 0 0 0 1px rgba(13, 148, 136, 0.18), var(--shadow-card); }
+.table-card.busy { border-color: rgba(153, 27, 27, 0.45); box-shadow: 0 0 0 1px rgba(153, 27, 27, 0.18), var(--shadow-card); }
 .table-card-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
-.table-name { font-weight: 800; font-size: 16px; display: flex; align-items: center; gap: 6px; }
+.table-name { font-weight: 800; font-size: 16px; display: flex; align-items: center; gap: 6px; min-width: 0; }
+.table-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .table-name .ic { color: var(--accent); }
-.table-card-bottom { display: flex; align-items: flex-end; justify-content: space-between; gap: 6px; }
-.table-sum { font-weight: 800; font-size: 17px; color: var(--accent); }
-.badge { font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: .03em; }
-.badge-busy { background: rgba(13, 148, 136, 0.12); color: var(--accent); }
+.table-card-bottom { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
+.table-card-bottom .muted { font-size: 12.5px; line-height: 1.25; min-width: 0; }
+.table-sum { font-weight: 800; font-size: 17px; color: var(--accent); white-space: nowrap; flex: none; }
+.badge { font-size: 10.5px; font-weight: 800; padding: 3px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: .02em; white-space: nowrap; flex: none; }
+.badge-busy { background: rgba(153, 27, 27, 0.12); color: var(--accent); }
 .badge-free { background: var(--bg-3); color: var(--muted); }
 
 /* ---- order list ---- */
@@ -234,7 +236,7 @@ nav.bottom a.ext-link { color: var(--muted); opacity: 0.7; }
 .picker-info { flex: 1; min-width: 0; }
 .picker-name { font-weight: 700; }
 .picker-price { font-size: 13px; margin-top: 1px; }
-.qty-pill { background: rgba(13, 148, 136, 0.14); color: var(--accent); font-weight: 800; font-size: 13px; min-width: 24px; height: 24px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; padding: 0 7px; }
+.qty-pill { background: rgba(153, 27, 27, 0.14); color: var(--accent); font-weight: 800; font-size: 13px; min-width: 24px; height: 24px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; padding: 0 7px; }
 .picker-add { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 10px; background: var(--accent); color: #fff; }
 
 /* ====== RECEIPT (rekening, бельгийский формат, 80mm) ====== */
