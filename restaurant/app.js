@@ -792,29 +792,63 @@ function doDeleteDish(id) {
 }
 
 // ====== VIEW: HISTORY ======
-function viewHistory() {
-  const list = state.history;
-  const body = list.length ? list.map(h => {
-    const qty = (h.items || []).reduce((n, i) => n + i.qty, 0);
-    return `
+function dayLabel(key) {
+  const today = localDateKey(new Date().toISOString());
+  const yd = new Date(); yd.setDate(yd.getDate() - 1);
+  if (key === today) return "Сьогодні";
+  if (key === localDateKey(yd.toISOString())) return "Вчора";
+  const [Y, M, D] = key.split("-");
+  const months = ["січня", "лютого", "березня", "квітня", "травня", "червня", "липня", "серпня", "вересня", "жовтня", "листопада", "грудня"];
+  return `${parseInt(D)} ${months[parseInt(M) - 1]} ${Y}`;
+}
+function histItemHtml(h) {
+  const qty = (h.items || []).reduce((n, i) => n + i.qty, 0);
+  const t = new Date(h.closedAt).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
+  return `
     <button class="card hist-item" onclick="showHistReceipt('${h.id}')">
       <div class="hist-info">
         <div class="hist-name">${esc(h.tableName)}</div>
-        <div class="hist-meta muted">${icon("clock", 13, "dim")} ${fmtDateTime(h.closedAt)} · ${qty} ${plural(qty, "позиція", "позиції", "позицій")}</div>
+        <div class="hist-meta muted">${icon("clock", 13, "dim")} ${t} · ${qty} ${plural(qty, "позиція", "позиції", "позицій")} · ${esc(h.pay || "Card")}</div>
       </div>
       <div class="hist-sum">${money(h.total)}</div>
       <span class="hist-chev">${icon("chevronRight", 18, "dim")}</span>
     </button>`;
-  }).join("") : emptyState("history", "Історія порожня", "Сюди потрапляють закриті (сплачені) чеки.", "", "");
+}
+function viewHistory() {
+  const list = [...state.history].sort((a, b) => String(b.closedAt).localeCompare(String(a.closedAt)));
+  if (!list.length) {
+    return `
+    <header class="topbar">
+      <div class="topbar-title">${icon("history", 22)} Історія</div>
+      <button class="icon-btn" onclick="showDayReport()" aria-label="Звіт за день">${icon("report", 20)}</button>
+    </header>
+    <div class="page">${emptyState("history", "Історія порожня", "Сюди потрапляють закриті (сплачені) чеки.", "", "")}</div>`;
+  }
+  // группировка по дням (новые дни сверху)
+  const groups = []; const idx = {};
+  list.forEach(h => {
+    const k = localDateKey(h.closedAt);
+    if (!(k in idx)) { idx[k] = groups.length; groups.push({ key: k, items: [] }); }
+    groups[idx[k]].items.push(h);
+  });
+  const body = groups.map(g => {
+    const dayTotal = g.items.reduce((s, h) => s + h.total, 0);
+    return `
+      <div class="hist-day">
+        <span>${dayLabel(g.key)}</span>
+        <span>${money(dayTotal)} · ${g.items.length} ${plural(g.items.length, "чек", "чеки", "чеків")}</span>
+      </div>
+      ${g.items.map(histItemHtml).join("")}`;
+  }).join("");
 
   return `
     <header class="topbar">
       <div class="topbar-title">${icon("history", 22)} Історія</div>
       <button class="icon-btn" onclick="showDayReport()" aria-label="Звіт за день">${icon("report", 20)}</button>
-      ${list.length ? `<button class="icon-btn danger" onclick="confirmClearHistory()" aria-label="Очистити">${icon("trash", 20)}</button>` : ""}
+      <button class="icon-btn danger" onclick="confirmClearHistory()" aria-label="Очистити">${icon("trash", 20)}</button>
     </header>
     <div class="page">
-      ${list.length ? `<div class="hist-summary card">${icon("wallet", 18)} Усього за весь час: <b>${money(list.reduce((s, h) => s + h.total, 0))}</b> · ${list.length} ${plural(list.length, "чек", "чеки", "чеків")}</div>` : ""}
+      <div class="hist-summary card">${icon("wallet", 18)} Усього за весь час: <b>${money(list.reduce((s, h) => s + h.total, 0))}</b> · ${list.length} ${plural(list.length, "чек", "чеки", "чеків")}</div>
       <div class="list-gap">${body}</div>
     </div>`;
 }
