@@ -254,6 +254,8 @@ function genFiscal() {
   const vatDigits = ((state.settings.vatNumber || "").replace(/\D/g, "") || randDigits(10)).slice(0, 10).padEnd(10, "0");
   return {
     fdm: "BMC" + randDigits(8),
+    fdmTicket: randDigits(4),
+    operator: randDigits(2) + "abcdefghijklmnopqrstuvwxyz"[Math.floor(Math.random() * 26)] + "abcdefghijklmnopqrstuvwxyz"[Math.floor(Math.random() * 26)],
     vsc: vatDigits + "-" + randDigits(3),
     sce: "BTIL" + randDigits(10),
     ver: randDigits(3) + "." + randDigits(2) + ".R." + randDigits(5),
@@ -655,8 +657,9 @@ function receiptHtml(rc, pay) {
     <div class="r-rule"></div>
     <div class="r-meta">
       <div class="r-mrow"><span>Tafel: ${esc(rc.tableName)}</span><span>${fmtReceiptDateTime(rc.closedAt)}</span></div>
-      <div class="r-mrow"><span>Rek. nr: ${rc.billNo ?? "-"}</span><span></span></div>
-      ${s.server ? `<div class="r-mrow"><span>Bediend door: ${esc(s.server)}</span><span></span></div>` : ""}
+      <div class="r-mrow"><span>Rek. nr: ${rc.billNo ?? "-"}</span><span>Stoel: 1</span></div>
+      <div class="r-mrow"><span>FDM Ticket nr: ${f.fdmTicket}</span><span></span></div>
+      <div class="r-mrow"><span>Bediend door: ${esc(s.server || f.operator)}</span><span></span></div>
     </div>
     <div class="r-rule"></div>
     <div class="r-line r-lhead"><span class="r-q">Qty</span><span class="r-d">Omschrijving</span><span class="r-ep">E.P.</span><span class="r-tot">Totaal</span><span class="r-vl"></span></div>
