@@ -247,6 +247,27 @@ function fmtReceiptDateTime(iso) {
 const VAT_LETTER = { 21: "A", 12: "B", 6: "C" };
 function vatLetter(r) { return VAT_LETTER[r] || "C"; }
 function nextBillNo() { state.billCounter = (Number(state.billCounter) || 1000) + 1; return state.billCounter; }
+// ----- учебные «фискальные» контрольные данные (случайные, как на образце чека) -----
+function randDigits(n) { let s = ""; for (let i = 0; i < n; i++) s += Math.floor(Math.random() * 10); return s; }
+function randHex(n, upper) { const c = upper ? "0123456789ABCDEF" : "0123456789abcdef"; let s = ""; for (let i = 0; i < n; i++) s += c[Math.floor(Math.random() * 16)]; return s; }
+function genFiscal() {
+  const vatDigits = ((state.settings.vatNumber || "").replace(/\D/g, "") || randDigits(10)).slice(0, 10).padEnd(10, "0");
+  return {
+    fdm: "BMC" + randDigits(8),
+    vsc: vatDigits + "-" + randDigits(3),
+    sce: "BTIL" + randDigits(10),
+    ver: randDigits(3) + "." + randDigits(2) + ".R." + randDigits(5),
+    ticket: randDigits(4) + "/" + randDigits(4) + " NS",
+    hash: randHex(8, false),
+    net: randHex(6, false),
+    pc: "PC" + (1 + Math.floor(Math.random() * 3)),
+    sig: randHex(40, true),
+  };
+}
+function fmtControlDateTime(iso) {
+  const d = new Date(iso), p = x => String(x).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
 // Имя для чека — без номера позиции из меню ("12 · Борщ" -> "Борщ").
 function dishName(name) { return String(name ?? "").replace(/^\d+\s*·\s*/, ""); }
 // Короткое имя для чека: основное название (первые 2-3 слова), без скобок,
@@ -495,6 +516,7 @@ function closeTable(id, saveToHistory) {
       id: uid(),
       tableName: t.name,
       billNo: t.billNo,
+      fiscal: t.fiscal,
       items: structuredClone(t.items),
       subtotal,
       service: svc,
@@ -583,7 +605,7 @@ function payToggleHtml(call, pay) {
 function showReceipt(tableId, pay) {
   const t = state.tables.find(x => x.id === tableId);
   if (!t || !t.items.length) return;
-  if (!t.billNo) { t.billNo = nextBillNo(); save(); }
+  if (!t.billNo) { t.billNo = nextBillNo(); t.fiscal = genFiscal(); save(); }
   pay = pay || "Card";
   openModal(receiptHtml(receiptFromTable(t), pay) +
     payToggleHtml(`showReceipt('${tableId}', '%P')`, pay) + `
@@ -594,11 +616,13 @@ function showReceipt(tableId, pay) {
     </div>`);
 }
 function receiptFromTable(t) {
-  return { tableName: t.name, items: t.items, billNo: t.billNo, closedAt: new Date().toISOString() };
+  return { tableName: t.name, items: t.items, billNo: t.billNo, fiscal: t.fiscal, closedAt: new Date().toISOString() };
 }
 function receiptHtml(rc, pay) {
   const s = state.settings;
   pay = pay || "Card";
+  const f = rc.fiscal || genFiscal();
+  const dt = fmtControlDateTime(rc.closedAt);
   const r2 = n => Math.round(n * 100) / 100;
   const total = rc.items.reduce((sum, i) => sum + i.price * i.qty, 0);
   // группировка по ставкам НДС
@@ -646,6 +670,16 @@ function receiptHtml(rc, pay) {
     <div class="r-rule"></div>
     <div class="r-vat r-vattot"><span>Totaal:</span><span>${euro(totVat)}</span><span>${euro(totExcl)}</span><span>${euro(totIncl)}</span></div>
     <div class="r-foot">Bedankt voor uw bezoek!</div>
+    <div class="r-rule"></div>
+    <div class="r-ctrl-title">Controlegegevens:</div>
+    <div class="r-ctrl">
+      <span>Fdm: ${f.fdm}</span><span>${dt}</span>
+      <span>Vsc: ${f.vsc}</span><span>Hash: ${f.hash}</span>
+      <span>Sce: ${f.sce}</span><span>NetwerkID: ${f.net}</span>
+      <span>Ver.: ${f.ver}</span><span>PC: ${f.pc}</span>
+      <span>Ticket: ${f.ticket}</span><span></span>
+      <span class="full">${f.sig}</span>
+    </div>
   </div>`;
 }
 function printReceipt() {
