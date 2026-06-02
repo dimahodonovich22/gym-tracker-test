@@ -99,7 +99,8 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
   border-radius: 16px; box-shadow: var(--shadow-card);
 }
 .grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 230px)); gap: 12px;
+  justify-content: start;
 }
 .table-card {
   text-align: left; padding: 14px; cursor: pointer; color: var(--text);
@@ -108,9 +109,9 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
 }
 .table-card:active { transform: scale(0.98); }
 .table-card.busy { border-color: rgba(153, 27, 27, 0.45); box-shadow: 0 0 0 1px rgba(153, 27, 27, 0.18), var(--shadow-card); }
-.table-card-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
-.table-name { font-weight: 800; font-size: 16px; display: flex; align-items: center; gap: 6px; min-width: 0; }
-.table-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.table-card-top { display: flex; align-items: center; gap: 8px; }
+.table-name { flex: 1; min-width: 0; font-weight: 800; font-size: 16px; display: flex; align-items: center; gap: 6px; }
+.table-name .tname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .table-name .ic { color: var(--accent); }
 .table-card-bottom { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
 .table-card-bottom .muted { font-size: 12.5px; line-height: 1.25; min-width: 0; }

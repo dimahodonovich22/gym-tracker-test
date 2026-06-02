@@ -345,7 +345,7 @@ function viewTables() {
     return `
       <button class="card table-card ${qty ? "busy" : "free"}" onclick="go('table/${t.id}')">
         <div class="table-card-top">
-          <span class="table-name">${icon("table", 18)} ${esc(t.name)}</span>
+          <span class="table-name">${icon("table", 18)}<span class="tname">${esc(t.name)}</span></span>
           <span class="badge ${qty ? "badge-busy" : "badge-free"}">${qty ? "Зайнятий" : "Вільний"}</span>
         </div>
         <div class="table-card-bottom">
