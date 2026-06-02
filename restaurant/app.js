@@ -14,7 +14,7 @@ const DEFAULT_STATE = {
     city: "2000 Antwerpen",
     vatNumber: "BE1026823291",
     phone: "",
-    server: "",
+    server: "01ha",
   },
   seeded: false,
   menuVersion: 0,
@@ -189,6 +189,7 @@ function load() {
       ...parsed,
       settings: { ...DEFAULT_STATE.settings, ...(parsed.settings || {}) },
     };
+    if (!s.settings.server) s.settings.server = "01ha"; // официант по умолчанию (как на образце)
     // Обновляем меню до актуальной версии + префилл реквизитов заведения.
     if (s.menuVersion !== MENU_VERSION) {
       applyMenu(s);
@@ -607,7 +608,9 @@ function payToggleHtml(call, pay) {
 function showReceipt(tableId, pay) {
   const t = state.tables.find(x => x.id === tableId);
   if (!t || !t.items.length) return;
-  if (!t.billNo) { t.billNo = nextBillNo(); t.fiscal = genFiscal(); save(); }
+  if (!t.billNo) t.billNo = nextBillNo();
+  t.fiscal = { ...genFiscal(), ...(t.fiscal || {}) }; // дозаполняем недостающие поля, существующие сохраняем
+  save();
   pay = pay || "Card";
   openModal(receiptHtml(receiptFromTable(t), pay) +
     payToggleHtml(`showReceipt('${tableId}', '%P')`, pay) + `
@@ -623,7 +626,7 @@ function receiptFromTable(t) {
 function receiptHtml(rc, pay) {
   const s = state.settings;
   pay = pay || "Card";
-  const f = rc.fiscal || genFiscal();
+  const f = { ...genFiscal(), ...(rc.fiscal || {}) };
   const dt = fmtControlDateTime(rc.closedAt);
   const r2 = n => Math.round(n * 100) / 100;
   const total = rc.items.reduce((sum, i) => sum + i.price * i.qty, 0);
@@ -816,6 +819,8 @@ function showHistReceipt(id, pay) {
   const h = state.history.find(x => x.id === id);
   if (!h) return;
   pay = pay || "Card";
+  h.fiscal = { ...genFiscal(), ...(h.fiscal || {}) }; // дозаполнить старые чеки
+  save();
   openModal(receiptHtml(h, pay) +
     payToggleHtml(`showHistReceipt('${id}', '%P')`, pay) + `
     <div class="modal-actions column receipt-actions">
