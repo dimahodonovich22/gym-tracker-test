@@ -15,6 +15,7 @@ const DEFAULT_STATE = {
     vatNumber: "BE1026823291",
     phone: "",
     server: "01ha",
+    printerIp: "",
   },
   seeded: false,
   menuVersion: 0,
@@ -617,7 +618,8 @@ function showReceipt(tableId, pay) {
   openModal(receiptHtml(receiptFromTable(t), pay) +
     payToggleHtml(`showReceipt('${tableId}', '%P')`, pay) + `
     <div class="modal-actions column receipt-actions">
-      <button class="btn btn-primary btn-block" onclick="printReceipt()">${icon("print", 20)} Друк рахунку</button>
+      <button class="btn btn-primary btn-block" onclick="printReceiptToPrinter('${tableId}','${pay}')">${icon("print", 20)} Друк на принтер</button>
+      <button class="btn btn-block" onclick="printReceipt()">Друк через браузер</button>
       <button class="btn btn-success btn-block" onclick="closeModal(); confirmCloseTable('${tableId}')">${icon("check", 18)} Сплачено і закрити</button>
       <button class="btn btn-block" onclick="closeModal()">Закрити</button>
     </div>`);
@@ -709,6 +711,160 @@ function printReceipt() {
   // даём браузеру отрисовать клон, затем печать
   setTimeout(() => window.print(), 120);
 }
+
+// ====== EPSON ePOS-Print (прямой Wi-Fi печать, напр. TM-m30III) ======
+const POS_W = 48; // символов в строке (80мм, шрифт A)
+const posRep = (c, n) => c.repeat(Math.max(0, n));
+function posCenter(s) { s = String(s).slice(0, POS_W); const pad = POS_W - s.length, l = Math.floor(pad / 2); return posRep(" ", l) + s + posRep(" ", pad - l); }
+function posDiv() { return posRep("-", POS_W); }
+function posLR(l, r) {
+  l = String(l); r = String(r);
+  let sp = POS_W - l.length - r.length;
+  if (sp < 1) { l = l.slice(0, Math.max(0, POS_W - r.length - 1)); sp = Math.max(1, POS_W - l.length - r.length); }
+  return l + posRep(" ", sp) + r;
+}
+function posItem(qty, name, ep, total, vat) {
+  const nameW = POS_W - 3 - 1 - 7 - 8 - 2; // =27
+  return String(qty).padStart(3) + " " + String(name).slice(0, nameW).padEnd(nameW) +
+    String(ep).padStart(7) + String(total).padStart(8) + String(vat).padStart(2);
+}
+function posVat(c1, c2, c3, c4) {
+  return String(c1).slice(0, 8).padEnd(8) + String(c2).padStart(13) + String(c3).padStart(13) + String(c4).padStart(14);
+}
+function posCols(l, r, lw) { return String(l).slice(0, lw).padEnd(lw) + String(r); }
+// одна строка ePOS-Print XML
+function eposLine(content, opt) {
+  opt = opt || {};
+  const pre = opt.align ? `<text align="${opt.align}"/>` : "";
+  let attrs = "";
+  if (opt.bold) attrs += ` em="true"`;
+  if (opt.reverse) attrs += ` reverse="true"`;
+  return pre + `<text${attrs}>${esc(content)}&#10;</text><text em="false" reverse="false" align="left"/>`;
+}
+function eposEnvelope(body) {
+  return `<?xml version="1.0" encoding="utf-8"?>` +
+    `<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Body>` +
+    `<epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print">` +
+    body + `<feed line="3"/><cut type="feed"/></epos-print></s:Body></s:Envelope>`;
+}
+// общий расчёт НДС
+function vatBreakdown(items) {
+  const r2 = n => Math.round(n * 100) / 100;
+  const total = items.reduce((s, i) => s + i.price * i.qty, 0);
+  const groups = {};
+  items.forEach(i => { const r = i.vat ?? 6; groups[r] = (groups[r] || 0) + i.price * i.qty; });
+  const rates = Object.keys(groups).map(Number).sort((a, b) => b - a);
+  let tV = 0, tE = 0, tI = 0;
+  const rows = rates.map(r => {
+    const incl = r2(groups[r]), excl = r2(incl / (1 + r / 100)), vat = r2(incl - excl);
+    tV += vat; tE += excl; tI += incl;
+    return { rate: r, letter: vatLetter(r), vat, excl, incl };
+  });
+  return { total, rows, tV: r2(tV), tE: r2(tE), tI: r2(tI) };
+}
+// тело чека для принтера
+function receiptEposBody(rc, pay) {
+  pay = pay || "Card";
+  const s = state.settings;
+  const f = { ...genFiscal(), ...(rc.fiscal || {}) };
+  const dt = fmtControlDateTime(rc.closedAt);
+  const b = vatBreakdown(rc.items);
+  let o = "";
+  o += eposLine(posCenter("BTW KASTICKET"), { reverse: true, bold: true });
+  o += eposLine(s.restaurant || "RESTAURANT", { align: "center", bold: true });
+  if (s.address) o += eposLine(posCenter(String(s.address).toUpperCase()));
+  if (s.city) o += eposLine(posCenter(s.city));
+  if (s.vatNumber) o += eposLine(posCenter(s.vatNumber));
+  o += eposLine(posDiv());
+  o += eposLine(posLR("Tafel: " + rc.tableName, fmtReceiptDateTime(rc.closedAt)));
+  o += eposLine(posLR("Rek. nr: " + (rc.billNo ?? "-"), "Stoel: 1"));
+  o += eposLine("FDM Ticket nr: " + f.fdmTicket);
+  o += eposLine("Bediend door: " + (s.server || f.operator));
+  o += eposLine(posDiv());
+  o += eposLine(posItem("Qty", "Omschrijving", "E.P.", "Totaal", ""), { bold: true });
+  rc.items.forEach(i => { o += eposLine(posItem(i.qty, receiptName(i.name), euro(i.price), euro(i.price * i.qty), vatLetter(i.vat ?? 6))); });
+  o += eposLine(posDiv());
+  o += eposLine(posLR("Algemeen Totaal:", euro(b.total)), { bold: true });
+  o += eposLine(posLR(pay, euro(b.total)), { bold: true });
+  o += eposLine(posDiv());
+  o += eposLine(posVat("BTW%", "BTW:", "Excl.:", "Incl.:"), { bold: true });
+  b.rows.forEach(v => { o += eposLine(posVat(v.letter + " " + v.rate + "%", euro(v.vat), euro(v.excl), euro(v.incl))); });
+  o += eposLine(posDiv());
+  o += eposLine(posVat("Totaal:", euro(b.tV), euro(b.tE), euro(b.tI)), { bold: true });
+  o += eposLine(posCenter("Bedankt voor uw bezoek!"));
+  o += eposLine(posDiv());
+  o += eposLine("Controlegegevens:", { bold: true });
+  o += eposLine(posCols("Fdm: " + f.fdm, dt, 24));
+  o += eposLine(posCols("Vsc: " + f.vsc, "Hash: " + f.hash, 24));
+  o += eposLine(posCols("Sce: " + f.sce, "NetwerkID: " + f.net, 24));
+  o += eposLine(posCols("Ver.: " + f.ver, "PC: " + f.pc, 24));
+  o += eposLine("Ticket: " + f.ticket);
+  o += eposLine(f.sig);
+  return o;
+}
+// тело Z-отчёта для принтера
+function reportEposBody(dateStr) {
+  const s = state.settings;
+  const entries = state.history.filter(h => localDateKey(h.closedAt) === dateStr);
+  let total = 0; const pay = { Card: 0, Cash: 0 }; const items = [];
+  entries.forEach(h => { total += h.total; pay[h.pay === "Cash" ? "Cash" : "Card"] += h.total; (h.items || []).forEach(i => items.push(i)); });
+  const b = vatBreakdown(items);
+  const [y, m, d] = dateStr.split("-");
+  let o = "";
+  o += eposLine(posCenter("Z-RAPPORT"), { reverse: true, bold: true });
+  o += eposLine(s.restaurant || "RESTAURANT", { align: "center", bold: true });
+  o += eposLine(posCenter(`${d}.${m}.${y}`));
+  o += eposLine(posDiv());
+  o += eposLine(posLR("Tickets:", String(entries.length)), { bold: true });
+  o += eposLine(posLR("Omzet:", euro(total)), { bold: true });
+  o += eposLine(posDiv());
+  o += eposLine(posLR("Card", euro(pay.Card)));
+  o += eposLine(posLR("Cash", euro(pay.Cash)));
+  o += eposLine(posDiv());
+  o += eposLine(posVat("BTW%", "BTW:", "Excl.:", "Incl.:"), { bold: true });
+  b.rows.forEach(v => { o += eposLine(posVat(v.letter + " " + v.rate + "%", euro(v.vat), euro(v.excl), euro(v.incl))); });
+  o += eposLine(posDiv());
+  o += eposLine(posVat("Totaal:", euro(b.tV), euro(b.tE), euro(b.tI)), { bold: true });
+  return o;
+}
+// отправка на принтер
+async function sendToPrinter(xml) {
+  const ip = (state.settings.printerIp || "").trim();
+  if (!ip) { toast("Вкажіть IP принтера в Налаштуваннях"); go("settings"); return; }
+  const url = `https://${ip}/cgi-bin/epos/service.cgi?devid=local_printer&timeout=10000`;
+  toast("Друк…");
+  try {
+    const res = await fetch(url, { method: "POST", headers: { "Content-Type": "text/xml; charset=utf-8", "SOAPAction": "\"\"" }, body: xml });
+    const txt = await res.text();
+    if (/success\s*=\s*"true"/i.test(txt)) toast("Надіслано на принтер ✓");
+    else { const m = txt.match(/code\s*=\s*"([^"]+)"/i); toast("Принтер: помилка" + (m ? " (" + m[1] + ")" : "")); }
+  } catch (e) {
+    toast("Немає зв'язку з принтером. Перевірте Wi-Fi, IP і довіру до https://" + ip);
+  }
+}
+function printReceiptToPrinter(tableId, pay) {
+  const t = state.tables.find(x => x.id === tableId);
+  if (!t || !t.items.length) return;
+  sendToPrinter(eposEnvelope(receiptEposBody(receiptFromTable(t), pay)));
+}
+function printHistToPrinter(id, pay) {
+  const h = state.history.find(x => x.id === id);
+  if (!h) return;
+  sendToPrinter(eposEnvelope(receiptEposBody(h, pay)));
+}
+function printReportToPrinter(dateStr) {
+  sendToPrinter(eposEnvelope(reportEposBody(dateStr)));
+}
+function testPrinter() {
+  let o = "";
+  o += eposLine(posCenter("VYSHNIA HOUSE"), { reverse: true, bold: true });
+  o += eposLine(posCenter("Test print OK"));
+  o += eposLine(posCenter(fmtControlDateTime(new Date().toISOString())));
+  o += eposLine(posDiv());
+  o += eposLine(posItem("1", "Test item", "0,00", "0,00", "C"));
+  sendToPrinter(eposEnvelope(o));
+}
+
 
 // ====== VIEW: MENU ======
 function viewMenu() {
@@ -861,7 +1017,8 @@ function showHistReceipt(id, pay) {
   openModal(receiptHtml(h, pay) +
     payToggleHtml(`showHistReceipt('${id}', '%P')`, pay) + `
     <div class="modal-actions column receipt-actions">
-      <button class="btn btn-primary btn-block" onclick="printReceipt()">${icon("print", 20)} Друк рахунку</button>
+      <button class="btn btn-primary btn-block" onclick="printHistToPrinter('${id}','${pay}')">${icon("print", 20)} Друк на принтер</button>
+      <button class="btn btn-block" onclick="printReceipt()">Друк через браузер</button>
       <button class="btn btn-block" onclick="closeModal()">Закрити</button>
     </div>`);
 }
@@ -899,6 +1056,13 @@ function viewSettings() {
         <button class="btn btn-primary btn-block" onclick="saveSettings()">${icon("check", 18)} Зберегти</button>
       </div>
       <div class="card settings-card" style="margin-top:12px">
+        <div style="font-weight:800">${icon("print", 18)} Принтер (Wi-Fi)</div>
+        <label class="field"><span>IP-адреса принтера Epson</span><input id="setPrinterIp" type="text" inputmode="decimal" value="${esc(s.printerIp || "")}" placeholder="напр. 192.168.1.50"></label>
+        <button class="btn btn-block" onclick="saveSettings()">${icon("check", 18)} Зберегти IP</button>
+        <button class="btn btn-primary btn-block" onclick="testPrinter()">${icon("print", 18)} Тест друку</button>
+        <div class="muted" style="font-size:13px">Принтер Epson TM-m30III має бути в тій самій Wi-Fi, що й iPad. <b>Перший раз:</b> відкрийте <b>https://[IP принтера]</b> у Safari і натисніть «Все одно відкрити», щоб довірити принтер — інакше друк блокується захистом.</div>
+      </div>
+      <div class="card settings-card" style="margin-top:12px">
         <div style="font-weight:800">Резервна копія</div>
         <div class="muted" style="font-size:13px;margin-top:-6px">Дані зберігаються лише на цьому пристрої. Регулярно завантажуйте копію — щоб не втратити меню й історію та переносити на інший планшет.</div>
         <button class="btn btn-block" onclick="exportBackup()">${icon("download", 18)} Завантажити копію (.json)</button>
@@ -915,6 +1079,7 @@ function saveSettings() {
   s.vatNumber = ($("#setVat").value || "").trim();
   s.phone = ($("#setPhone").value || "").trim();
   s.server = ($("#setServer").value || "").trim();
+  { const ip = $("#setPrinterIp"); if (ip) s.printerIp = (ip.value || "").trim(); }
   s.currency = ($("#setCur").value || "").trim() || "€";
   save();
   toast("Налаштування збережено");
@@ -992,7 +1157,8 @@ function showDayReport(dateStr) {
     <label class="field"><span>Дата</span><input type="date" id="repDate" value="${dateStr}" onchange="showDayReport(this.value)"></label>
     ${dayReportSheet(dateStr)}
     <div class="modal-actions column receipt-actions">
-      <button class="btn btn-primary btn-block" onclick="printReceipt()">${icon("print", 20)} Друк звіту</button>
+      <button class="btn btn-primary btn-block" onclick="printReportToPrinter('${dateStr}')">${icon("print", 20)} Друк на принтер</button>
+      <button class="btn btn-block" onclick="printReceipt()">Друк через браузер</button>
       <button class="btn btn-block" onclick="closeModal()">Закрити</button>
     </div>`);
 }
@@ -1043,6 +1209,7 @@ Object.assign(window, {
   showReceipt, printReceipt, editDish, saveDish, deleteDish, doDeleteDish,
   showHistReceipt, confirmClearHistory, clearHistory, saveSettings, closeModal,
   exportBackup, importBackup, applyBackup, showDayReport,
+  printReceiptToPrinter, printHistToPrinter, printReportToPrinter, testPrinter,
   state, save, render, toast,
 });
 
