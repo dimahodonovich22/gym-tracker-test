@@ -1068,7 +1068,7 @@ function viewSettings() {
         <button class="btn btn-block" onclick="exportBackup()">${icon("download", 18)} Завантажити копію (.json)</button>
         <button class="btn btn-block" onclick="importBackup()">${icon("upload", 18)} Відновити з файлу</button>
       </div>
-      <div class="muted footnote">Застосунок працює офлайн. Це <b>навчальний тренажер каси</b> для навчання персоналу — чек використовується лише в навчанні, а не з реальними клієнтами. Ширина чека 80&nbsp;мм.</div>
+      <div class="muted footnote">Застосунок працює офлайн. Дані зберігаються локально на цьому пристрої. Ширина чека&nbsp;— 80&nbsp;мм.</div>
     </div>`;
 }
 function saveSettings() {
