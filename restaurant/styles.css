@@ -102,6 +102,17 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
   display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 230px)); gap: 12px;
   justify-content: start;
 }
+/* зали (вкладки) + місця */
+.zone-tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 12px; margin: -2px 0 4px; -webkit-overflow-scrolling: touch; }
+.zone-tabs::-webkit-scrollbar { display: none; }
+.zone-tab { flex: none; padding: 8px 16px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--bg-2); font-weight: 700; font-size: 14px; color: var(--muted); cursor: pointer; white-space: nowrap; transition: background .12s, color .12s, border-color .12s; }
+.zone-tab.active { background: var(--accent); border-color: transparent; color: #fff; }
+.zone-head { font-size: 12px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin: 16px 2px 8px; }
+.zone-head:first-child { margin-top: 2px; }
+.zone-head + .grid { margin-bottom: 4px; }
+.seat-dots { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0 2px; }
+.seat-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); display: block; }
+.table-card.busy .seat-dots i { background: var(--accent); opacity: .55; }
 .table-card {
   text-align: left; padding: 14px; cursor: pointer; color: var(--text);
   display: flex; flex-direction: column; gap: 12px; min-height: 96px;
