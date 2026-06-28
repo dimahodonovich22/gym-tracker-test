@@ -321,9 +321,9 @@ function serviceAmount(subtotal) {
 }
 
 // ====== MODAL ======
-function openModal(html) {
+function openModal(html, extra = "") {
   const bg = $("#modalBg");
-  bg.innerHTML = `<div class="modal" role="dialog" aria-modal="true">${html}</div>`;
+  bg.innerHTML = `<div class="modal ${extra}" role="dialog" aria-modal="true">${html}</div>`;
   bg.classList.add("show");
   document.body.style.overflow = "hidden";
 }
@@ -587,22 +587,21 @@ function openDishPicker(tableId) {
       </div>`);
     return;
   }
-  pickerOpen = new Set(); // старт: усі категорії згорнуті (видно лише заголовки)
+  pickerCat = null; // старт: буде обрана перша категорія
   openDishPicker._table = tableId;
   openModal(`
     <div class="modal-head"><h2>Додати страву</h2><button class="icon-btn" onclick="closeModal(); render()">${icon("x", 20)}</button></div>
     <label class="field search-field">${icon("search", 18, "dim")}<input id="dishSearch" type="text" placeholder="Пошук по меню…" oninput="filterDishes(this.value)" autocomplete="off"></label>
     <div class="picker-list" id="pickerList">${renderPickerList(tableId, "")}</div>
-    <div class="modal-actions"><button class="btn btn-primary btn-block" onclick="closeModal(); render()">Готово</button></div>`);
+    <div class="modal-actions"><button class="btn btn-primary btn-block" onclick="closeModal(); render()">Готово</button></div>`, "modal-wide");
   setTimeout(() => $("#dishSearch")?.focus(), 50);
 }
 function filterDishes(q) {
   $("#pickerList").innerHTML = renderPickerList(openDishPicker._table, q);
 }
-let pickerOpen = new Set();
-function toggleCat(enc) {
-  const cat = decodeURIComponent(enc);
-  if (pickerOpen.has(cat)) pickerOpen.delete(cat); else pickerOpen.add(cat);
+let pickerCat = null;
+function selectCat(enc) {
+  pickerCat = decodeURIComponent(enc);
   const list = $("#pickerList");
   if (list) list.innerHTML = renderPickerList(openDishPicker._table, $("#dishSearch")?.value || "");
 }
@@ -622,27 +621,33 @@ function dishRowHtml(t, tableId, m) {
 function renderPickerList(tableId, q) {
   const t = state.tables.find(x => x.id === tableId);
   const query = (q || "").trim().toLowerCase();
-  const cats = {};
-  state.menu
-    .filter(m => !query || m.name.toLowerCase().includes(query))
-    .forEach(m => { (cats[m.category || "Інше"] ||= []).push(m); });
+  const allCats = [...new Set(state.menu.map(m => m.category || "Інше"))];
+  if (!allCats.length) return `<div class="picker-empty muted">Меню порожнє</div>`;
 
-  const keys = Object.keys(cats);
-  if (!keys.length) return `<div class="picker-empty muted">Нічого не знайдено</div>`;
+  // права панель: страви (за пошуком або за обраною категорією)
+  let activeCat = null, dishesHtml;
+  if (query) {
+    const matches = state.menu.filter(m => m.name.toLowerCase().includes(query));
+    dishesHtml = matches.length
+      ? matches.map(m => dishRowHtml(t, tableId, m)).join("")
+      : `<div class="picker-empty muted">Нічого не знайдено</div>`;
+  } else {
+    activeCat = allCats.includes(pickerCat) ? pickerCat : allCats[0];
+    dishesHtml = state.menu.filter(m => (m.category || "Інше") === activeCat)
+      .map(m => dishRowHtml(t, tableId, m)).join("");
+  }
 
-  const searching = !!query;
-  return keys.map(cat => {
-    const open = searching || pickerOpen.has(cat);
-    // скільки страв цієї категорії вже в замовленні
-    const inCat = cats[cat].reduce((n, m) => n + (t?.items.find(i => i.menuId === m.id)?.qty || 0), 0);
-    const head = `
-      <button class="picker-cat-btn ${open ? "open" : ""}" onclick="toggleCat('${encodeURIComponent(cat)}')">
-        <span class="picker-cat-name">${esc(cat)}</span>
-        <span class="picker-cat-meta">${inCat ? `<span class="qty-pill">${inCat}</span>` : ""}<span class="muted">${cats[cat].length}</span>${icon(open ? "chevronDown" : "chevronRight", 18, "dim")}</span>
+  // ліва панель: категорії у 2 стовпці
+  const catsHtml = allCats.map(c => {
+    const inCat = state.menu.filter(m => (m.category || "Інше") === c)
+      .reduce((n, m) => n + (t?.items.find(i => i.menuId === m.id)?.qty || 0), 0);
+    return `<button class="picker-cat-tile ${c === activeCat ? "active" : ""}" onclick="selectCat('${encodeURIComponent(c)}')">
+        <span class="pct-name">${esc(c)}</span>
+        ${inCat ? `<span class="qty-pill">${inCat}</span>` : ""}
       </button>`;
-    const rows = open ? cats[cat].map(m => dishRowHtml(t, tableId, m)).join("") : "";
-    return head + rows;
   }).join("");
+
+  return `<div class="picker2"><div class="picker-cats">${catsHtml}</div><div class="picker-dishes">${dishesHtml}</div></div>`;
 }
 function addDish(tableId, menuId) {
   const t = state.tables.find(x => x.id === tableId);
@@ -1262,7 +1267,7 @@ function dayReportSheet(dateStr) {
 // expose for inline handlers
 Object.assign(window, {
   go, setZone, addTable, saveNewTable, renameTable, saveRenameTable, changeQty,
-  confirmCloseTable, closeTable, openDishPicker, filterDishes, toggleCat, addDish,
+  confirmCloseTable, closeTable, openDishPicker, filterDishes, selectCat, addDish,
   showReceipt, printReceipt, editDish, saveDish, deleteDish, doDeleteDish,
   showHistReceipt, confirmClearHistory, clearHistory, saveSettings, closeModal,
   exportBackup, importBackup, applyBackup, showDayReport,
