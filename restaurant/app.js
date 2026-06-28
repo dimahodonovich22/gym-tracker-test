@@ -587,16 +587,37 @@ function openDishPicker(tableId) {
       </div>`);
     return;
   }
+  pickerOpen = new Set(); // старт: усі категорії згорнуті (видно лише заголовки)
+  openDishPicker._table = tableId;
   openModal(`
     <div class="modal-head"><h2>Додати страву</h2><button class="icon-btn" onclick="closeModal(); render()">${icon("x", 20)}</button></div>
     <label class="field search-field">${icon("search", 18, "dim")}<input id="dishSearch" type="text" placeholder="Пошук по меню…" oninput="filterDishes(this.value)" autocomplete="off"></label>
     <div class="picker-list" id="pickerList">${renderPickerList(tableId, "")}</div>
     <div class="modal-actions"><button class="btn btn-primary btn-block" onclick="closeModal(); render()">Готово</button></div>`);
-  openDishPicker._table = tableId;
   setTimeout(() => $("#dishSearch")?.focus(), 50);
 }
 function filterDishes(q) {
   $("#pickerList").innerHTML = renderPickerList(openDishPicker._table, q);
+}
+let pickerOpen = new Set();
+function toggleCat(enc) {
+  const cat = decodeURIComponent(enc);
+  if (pickerOpen.has(cat)) pickerOpen.delete(cat); else pickerOpen.add(cat);
+  const list = $("#pickerList");
+  if (list) list.innerHTML = renderPickerList(openDishPicker._table, $("#dishSearch")?.value || "");
+}
+function dishRowHtml(t, tableId, m) {
+  const inOrder = t?.items.find(i => i.menuId === m.id);
+  const qty = inOrder ? inOrder.qty : 0;
+  return `
+        <div class="picker-row" onclick="addDish('${tableId}','${m.id}')">
+          <div class="picker-info">
+            <div class="picker-name">${esc(m.name)}</div>
+            <div class="picker-price muted">${money(m.price)}</div>
+          </div>
+          ${qty ? `<span class="qty-pill">${qty}</span>` : ""}
+          <span class="picker-add">${icon("plus", 18)}</span>
+        </div>`;
 }
 function renderPickerList(tableId, q) {
   const t = state.tables.find(x => x.id === tableId);
@@ -609,21 +630,19 @@ function renderPickerList(tableId, q) {
   const keys = Object.keys(cats);
   if (!keys.length) return `<div class="picker-empty muted">Нічого не знайдено</div>`;
 
-  return keys.map(cat => `
-    <div class="picker-cat">${esc(cat)}</div>
-    ${cats[cat].map(m => {
-      const inOrder = t?.items.find(i => i.menuId === m.id);
-      const qty = inOrder ? inOrder.qty : 0;
-      return `
-        <div class="picker-row" onclick="addDish('${tableId}','${m.id}')">
-          <div class="picker-info">
-            <div class="picker-name">${esc(m.name)}</div>
-            <div class="picker-price muted">${money(m.price)}</div>
-          </div>
-          ${qty ? `<span class="qty-pill">${qty}</span>` : ""}
-          <span class="picker-add">${icon("plus", 18)}</span>
-        </div>`;
-    }).join("")}`).join("");
+  const searching = !!query;
+  return keys.map(cat => {
+    const open = searching || pickerOpen.has(cat);
+    // скільки страв цієї категорії вже в замовленні
+    const inCat = cats[cat].reduce((n, m) => n + (t?.items.find(i => i.menuId === m.id)?.qty || 0), 0);
+    const head = `
+      <button class="picker-cat-btn ${open ? "open" : ""}" onclick="toggleCat('${encodeURIComponent(cat)}')">
+        <span class="picker-cat-name">${esc(cat)}</span>
+        <span class="picker-cat-meta">${inCat ? `<span class="qty-pill">${inCat}</span>` : ""}<span class="muted">${cats[cat].length}</span>${icon(open ? "chevronDown" : "chevronRight", 18, "dim")}</span>
+      </button>`;
+    const rows = open ? cats[cat].map(m => dishRowHtml(t, tableId, m)).join("") : "";
+    return head + rows;
+  }).join("");
 }
 function addDish(tableId, menuId) {
   const t = state.tables.find(x => x.id === tableId);
@@ -1243,7 +1262,7 @@ function dayReportSheet(dateStr) {
 // expose for inline handlers
 Object.assign(window, {
   go, setZone, addTable, saveNewTable, renameTable, saveRenameTable, changeQty,
-  confirmCloseTable, closeTable, openDishPicker, filterDishes, addDish,
+  confirmCloseTable, closeTable, openDishPicker, filterDishes, toggleCat, addDish,
   showReceipt, printReceipt, editDish, saveDish, deleteDish, doDeleteDish,
   showHistReceipt, confirmClearHistory, clearHistory, saveSettings, closeModal,
   exportBackup, importBackup, applyBackup, showDayReport,
